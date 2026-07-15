@@ -131,3 +131,73 @@ ${errorMessage ?? "(代码运行没有抛出异常，但结果大概率不正确
 - lines: number[]，最可能出错的代码行号数组（从1开始计数），可以是1个或多个，最多5个
 - explanation: string，中文，一句话说明怀疑原因，不要透露修复方式或正确答案`;
 }
+
+export const interviewClassificationSchema = z.object({
+  category: z
+    .string()
+    .describe("这道面试问答题所属的分类，如“系统设计”“项目经验”“行为面试”“计算机基础”，2-6个汉字"),
+  standardAnswer: z
+    .string()
+    .describe(
+      "用口语化、连贯自然的一段话给出这道题的标准回答，就像在面试里讲给面试官听一样，不要写成分点列表、不要堆砌术语，控制在300字左右",
+    ),
+});
+
+export function buildInterviewClassificationPrompt(title: string, description: string) {
+  return `你是一个资深技术面试官。请阅读下面这道面试问答题，完成以下工作：
+1. 判断这道题所属的分类（如“系统设计”“项目经验”“行为面试”“计算机基础”等）
+2. 给出一段口语化、连贯自然的标准回答，就像在面试里讲给面试官听一样，不要分点、不要堆砌术语
+
+题目标题：${title}
+
+题目描述：
+${description}
+
+请以 JSON 格式输出，JSON 必须且只能包含以下英文字段名：
+- category: string，中文，2-6个汉字
+- standardAnswer: string，中文，口语化的一段话，300字左右`;
+}
+
+/**
+ * Builds the shared history block fed into both the practice-feedback and
+ * recite-chat system prompts, giving the AI permanent cross-session memory
+ * of this question: every past recording (transcript + feedback) and every
+ * past freeform Q&A exchange, in chronological order.
+ */
+export function buildInterviewContext(options: {
+  title: string;
+  description: string;
+  standardAnswer: string | null;
+  timeline: { kind: "attempt" | "chat"; createdAt: Date; text: string }[];
+}) {
+  const { title, description, standardAnswer, timeline } = options;
+
+  const historyBlock =
+    timeline.length === 0
+      ? "（这是第一次接触这道题，还没有历史记录）"
+      : timeline
+          .map((entry, i) => {
+            const date = new Intl.DateTimeFormat("zh-CN", {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            }).format(entry.createdAt);
+            const label = entry.kind === "attempt" ? "练习" : "问答";
+            return `[第${i + 1}条 · ${label} · ${date}]\n${entry.text}`;
+          })
+          .join("\n\n");
+
+  return `你是一个耐心、专业的面试教练，正在陪用户准备这道面试问答题：
+
+题目：${title}
+${description}
+
+标准答案：
+${standardAnswer ?? "（还没有标准答案）"}
+
+这道题目前的练习历史（按时间顺序，包含每次录音转写+AI建议，以及历史问答）：
+${historyBlock}
+
+回答用中文，语气专业但友善。回复时可以参考历史记录里用户的进步或反复出现的问题，帮助用户看到自己的变化趋势。`;
+}
