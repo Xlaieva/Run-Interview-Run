@@ -8,7 +8,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import type { JudgeMode, Language, Solution, TestCase } from "@/lib/types";
+import type { ChatRole, JudgeMode, Language, Solution, TestCase } from "@/lib/types";
 
 export const problems = pgTable("problems", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -77,7 +77,82 @@ export const attemptLogsRelations = relations(attemptLogs, ({ one }) => ({
   }),
 }));
 
+export const interviewQuestions = pgTable("interview_questions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  userDescription: text("user_description").notNull(),
+  category: text("category"),
+  /** AI-generated, hand-editable single reference answer (spoken-style, same voice as Solution.verbalExplanation). */
+  standardAnswer: text("standard_answer"),
+
+  totalAttempts: integer("total_attempts").notNull().default(0),
+  /** Most recent recording only — overwritten (and the old Blob file deleted) on every new attempt. */
+  lastRecordingUrl: text("last_recording_url"),
+  lastPracticedAt: timestamp("last_practiced_at", { withTimezone: true }),
+
+  lastReviewedAt: timestamp("last_reviewed_at", { withTimezone: true }),
+  reviewCount: integer("review_count").notNull().default(0),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const interviewAttempts = pgTable("interview_attempts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  questionId: uuid("question_id")
+    .notNull()
+    .references(() => interviewQuestions.id, { onDelete: "cascade" }),
+  /** Transcribed text with inline "（沉默N秒）" markers already inserted (silences ≥3s only). */
+  transcript: text("transcript").notNull(),
+  silenceTotalSeconds: integer("silence_total_seconds").notNull().default(0),
+  recordingDurationSeconds: integer("recording_duration_seconds").notNull().default(0),
+  /** AI feedback comparing this transcript against standardAnswer, informed by prior attempts. */
+  aiFeedback: text("ai_feedback").notNull(),
+  isReview: boolean("is_review").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const interviewChatMessages = pgTable("interview_chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  questionId: uuid("question_id")
+    .notNull()
+    .references(() => interviewQuestions.id, { onDelete: "cascade" }),
+  role: text("role").$type<ChatRole>().notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const interviewQuestionsRelations = relations(interviewQuestions, ({ many }) => ({
+  attempts: many(interviewAttempts),
+  chatMessages: many(interviewChatMessages),
+}));
+
+export const interviewAttemptsRelations = relations(interviewAttempts, ({ one }) => ({
+  question: one(interviewQuestions, {
+    fields: [interviewAttempts.questionId],
+    references: [interviewQuestions.id],
+  }),
+}));
+
+export const interviewChatMessagesRelations = relations(interviewChatMessages, ({ one }) => ({
+  question: one(interviewQuestions, {
+    fields: [interviewChatMessages.questionId],
+    references: [interviewQuestions.id],
+  }),
+}));
+
 export type Problem = typeof problems.$inferSelect;
 export type NewProblem = typeof problems.$inferInsert;
 export type AttemptLog = typeof attemptLogs.$inferSelect;
 export type NewAttemptLog = typeof attemptLogs.$inferInsert;
+export type InterviewQuestion = typeof interviewQuestions.$inferSelect;
+export type NewInterviewQuestion = typeof interviewQuestions.$inferInsert;
+export type InterviewAttempt = typeof interviewAttempts.$inferSelect;
+export type NewInterviewAttempt = typeof interviewAttempts.$inferInsert;
+export type InterviewChatMessage = typeof interviewChatMessages.$inferSelect;
+export type NewInterviewChatMessage = typeof interviewChatMessages.$inferInsert;
