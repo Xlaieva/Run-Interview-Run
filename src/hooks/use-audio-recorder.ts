@@ -40,7 +40,7 @@ export function useAudioRecorder() {
   const silenceStartRef = useRef<number | null>(null);
   const lastPollRef = useRef<number>(0);
 
-  const pollVolume = useCallback(() => {
+  const pollVolume = useCallback(function pollVolume() {
     const analyser = analyserRef.current;
     if (!analyser) return;
 
