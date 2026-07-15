@@ -1,0 +1,66 @@
+import type { JudgeMode, RunResult, TestCase } from "./types";
+
+const RUN_TIMEOUT_MS = 5000;
+
+export function runCode(
+  code: string,
+  options?: {
+    judgeMode?: JudgeMode | null;
+    functionName?: string | null;
+    inputVariableNames?: string[] | null;
+    testCases?: TestCase[] | null;
+  },
+): Promise<RunResult> {
+  return new Promise((resolve) => {
+    const worker = new Worker(
+      new URL("../workers/run-code.worker.ts", import.meta.url),
+    );
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      worker.terminate();
+      resolve({
+        ok: false,
+        logs: [],
+        error: {
+          name: "TimeoutError",
+          message: `代码运行超过 ${RUN_TIMEOUT_MS / 1000} 秒，可能存在死循环`,
+        },
+        timedOut: true,
+      });
+    }, RUN_TIMEOUT_MS);
+
+    worker.onmessage = (event: MessageEvent<RunResult>) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      worker.terminate();
+      resolve(event.data);
+    };
+
+    worker.onerror = (event: ErrorEvent) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      worker.terminate();
+      resolve({
+        ok: false,
+        logs: [],
+        error: {
+          name: "WorkerError",
+          message: event.message || "运行时出现未知错误",
+        },
+      });
+    };
+
+    worker.postMessage({
+      code,
+      judgeMode: options?.judgeMode ?? undefined,
+      functionName: options?.functionName ?? undefined,
+      inputVariableNames: options?.inputVariableNames ?? undefined,
+      testCases: options?.testCases ?? undefined,
+    });
+  });
+}
