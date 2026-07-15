@@ -17,10 +17,7 @@ export function RecorderPanel({
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    if (!recording) {
-      setElapsed(0);
-      return;
-    }
+    if (!recording) return;
     const startedAt = Date.now();
     const interval = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
     return () => clearInterval(interval);
@@ -36,6 +33,7 @@ export function RecorderPanel({
       const result = await stop();
       if (result) onComplete(result);
     } else {
+      setElapsed(0);
       await start();
     }
   }
