@@ -1,3 +1,5 @@
+import type { InterviewAttempt, InterviewChatMessage } from "@/db/schema";
+
 export type ChatRole = "user" | "assistant";
 
 export interface ChatMessage {
@@ -77,4 +79,21 @@ export interface RunResult {
    * case passes.
    */
   testResults?: TestCaseResult[];
+}
+
+export type InterviewTimelineEntry =
+  | { kind: "attempt"; data: InterviewAttempt }
+  | { kind: "chat"; data: InterviewChatMessage };
+
+export function mergeInterviewTimeline(
+  attempts: InterviewAttempt[],
+  chatMessages: InterviewChatMessage[],
+): InterviewTimelineEntry[] {
+  const entries: InterviewTimelineEntry[] = [
+    ...attempts.map((data) => ({ kind: "attempt" as const, data })),
+    ...chatMessages.map((data) => ({ kind: "chat" as const, data })),
+  ];
+  return entries.sort(
+    (a, b) => new Date(a.data.createdAt).getTime() - new Date(b.data.createdAt).getTime(),
+  );
 }
