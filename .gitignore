@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# git worktrees
+/.worktrees/
+
 # pyodide runtime assets — copied from node_modules/pyodide by the
 # postinstall script (scripts/copy-pyodide-assets.js), regenerated on every
 # npm install so they don't need to be committed
