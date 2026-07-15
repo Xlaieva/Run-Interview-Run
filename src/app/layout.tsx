@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { AppHeader } from "@/components/shell/app-header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,6 +14,10 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "刷题台",
@@ -31,7 +36,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <TooltipProvider delay={200}>
-          {children}
+          <AppHeader />
+          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
           <Toaster richColors position="top-center" />
         </TooltipProvider>
       </body>
