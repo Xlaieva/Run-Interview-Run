@@ -7,6 +7,14 @@ export interface SilenceRange {
 
 const MIN_SILENCE_SECONDS = 3;
 
+/** Silence ranges long enough to matter, with duration precomputed, sorted by start time. */
+function significantRanges(silenceRanges: SilenceRange[]) {
+  return silenceRanges
+    .map((r) => ({ ...r, duration: r.end - r.start }))
+    .filter((r) => r.duration >= MIN_SILENCE_SECONDS)
+    .sort((a, b) => a.start - b.start);
+}
+
 /**
  * Inserts "（沉默N秒）" markers into the transcript at the position matching
  * each silence range's timestamp. A silence range is placed right after the
@@ -18,10 +26,7 @@ export function insertSilenceMarkers(
   segments: TranscriptSegment[],
   silenceRanges: SilenceRange[],
 ): string {
-  const significant = silenceRanges
-    .map((r) => ({ ...r, duration: r.end - r.start }))
-    .filter((r) => r.duration >= MIN_SILENCE_SECONDS)
-    .sort((a, b) => a.start - b.start);
+  const significant = significantRanges(silenceRanges);
 
   if (segments.length === 0) {
     return significant
@@ -58,8 +63,6 @@ export function insertSilenceMarkers(
 
 export function totalSilenceSeconds(silenceRanges: SilenceRange[]): number {
   return Math.round(
-    silenceRanges
-      .filter((r) => r.end - r.start >= MIN_SILENCE_SECONDS)
-      .reduce((sum, r) => sum + (r.end - r.start), 0),
+    significantRanges(silenceRanges).reduce((sum, r) => sum + r.duration, 0),
   );
 }

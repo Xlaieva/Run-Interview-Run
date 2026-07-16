@@ -17,6 +17,10 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "audio/wav": "wav",
 };
 
+// Matches Groq's own upload cap — reject oversized uploads before spending a
+// transcription call or Blob storage on them.
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -49,7 +53,15 @@ export async function POST(
     return NextResponse.json({ error: "audio 不能为空" }, { status: 400 });
   }
 
-  const extension = EXTENSION_BY_MIME[mimeType] ?? "webm";
+  if (audio.size > MAX_AUDIO_BYTES) {
+    return NextResponse.json({ error: "录音文件过大" }, { status: 400 });
+  }
+
+  // Match on the MIME type's prefix (strip any ";codecs=..." suffix) so
+  // e.g. "audio/webm;codecs=opus" still resolves to "webm", not the
+  // fallback default by coincidence.
+  const mimeBase = mimeType.split(";")[0].trim();
+  const extension = EXTENSION_BY_MIME[mimeBase] ?? "webm";
 
   let transcription;
   try {
@@ -65,9 +77,11 @@ export async function POST(
   const transcript = insertSilenceMarkers(transcription.segments, silenceRanges);
   const silenceTotal = totalSilenceSeconds(silenceRanges);
 
-  // Upload latest recording, replacing the previous one.
+  // Upload the new recording, but don't delete the previous one yet — if
+  // anything below fails, the DB should still point at a file that exists
+  // rather than one we just deleted. The old file is only removed once the
+  // question row is confirmed to point at the new one.
   const recordingUrl = await uploadRecording(id, audio, extension);
-  await deleteRecording(question.lastRecordingUrl);
 
   // Build AI context from existing history (before this attempt is inserted).
   const [pastAttempts, pastChat] = await Promise.all([
@@ -136,6 +150,14 @@ export async function POST(
     })
     .where(eq(interviewQuestions.id, id))
     .returning();
+
+  // Only delete the old recording now that the question row is confirmed to
+  // point at the new one. Known limitation: two concurrent attempts on the
+  // same question can each upload+persist their own recording, and whichever
+  // update commits last "wins" — the other's file is orphaned in Blob rather
+  // than cleaned up. Acceptable for a single-user tool with no auth; a real
+  // fix would need a DB-level compare-and-swap on lastRecordingUrl.
+  await deleteRecording(question.lastRecordingUrl);
 
   return NextResponse.json({ attempt, question: updatedQuestion });
 }
