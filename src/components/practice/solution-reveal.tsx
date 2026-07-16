@@ -13,7 +13,7 @@ function SolutionBlock({ solution }: { solution: Solution }) {
         </span>
       </div>
       <p className="text-xs text-muted-foreground">{solution.approachSummary}</p>
-      <pre className="max-h-56 overflow-auto rounded-md border bg-black/40 p-3 font-mono text-xs whitespace-pre-wrap">
+      <pre className="max-h-56 overflow-auto rounded-md border bg-muted p-3 font-mono text-xs whitespace-pre-wrap">
         {solution.solutionCode}
       </pre>
     </div>

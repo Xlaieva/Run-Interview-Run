@@ -13,7 +13,7 @@ export function DiffView({
   const lines = diffLines(original, updated);
 
   return (
-    <div className="max-h-64 overflow-y-auto rounded-md border bg-black/40 font-mono text-xs">
+    <div className="max-h-64 overflow-y-auto rounded-md border bg-muted font-mono text-xs">
       {lines.map((line, i) => (
         <div
           key={i}

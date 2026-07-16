@@ -66,7 +66,7 @@ export function ReciteCodeStage({
             </section>
             <pre
               className={cn(
-                "rounded-md border-l-4 bg-black/40 p-4 font-mono text-sm whitespace-pre-wrap",
+                "rounded-md border-l-4 bg-muted p-4 font-mono text-sm whitespace-pre-wrap",
                 color.border,
               )}
             >
@@ -89,7 +89,7 @@ export function ReciteCodeStage({
               type="button"
               onClick={() => onFocus(i)}
               className={cn(
-                "group rounded-md border-l-4 bg-black/40 p-3 text-left transition-colors hover:bg-black/60",
+                "group rounded-md border-l-4 bg-muted/60 p-3 text-left transition-colors hover:bg-muted",
                 color.border,
               )}
             >

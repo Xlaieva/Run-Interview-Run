@@ -127,7 +127,7 @@ export function CodeEditorPanel({
           }}
         />
       </div>
-      <div className="max-h-48 min-h-24 overflow-y-auto border-t bg-black/40 px-3 py-2 font-mono text-xs">
+      <div className="max-h-48 min-h-24 overflow-y-auto border-t bg-muted px-3 py-2 font-mono text-xs">
         {!runResult && (
           <p className="text-muted-foreground">点击「运行」执行代码，输出会显示在这里</p>
         )}
