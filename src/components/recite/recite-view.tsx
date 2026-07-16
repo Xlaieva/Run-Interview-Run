@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { ReciteProblemPanel } from "./recite-problem-panel";
 import { ReciteCodeStage } from "./recite-code-stage";
+import { ReciteCountdown } from "./recite-countdown";
 import { ChatPanel } from "@/components/practice/chat-panel";
 import type { Problem } from "@/db/schema";
 import type { ChatMessage } from "@/lib/types";
@@ -52,7 +53,7 @@ export function ReciteView({ problem }: { problem: Problem }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-2">
+      <div className="flex shrink-0 select-none items-center gap-3 border-b px-4 py-2">
         <Link
           href="/"
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -60,7 +61,7 @@ export function ReciteView({ problem }: { problem: Problem }) {
           <ArrowLeft className="size-4" />
           返回
         </Link>
-        <span className="text-sm font-medium">{problem.title} · 背题模式</span>
+        <ReciteCountdown redirectTo={`/problem/${problem.id}`} />
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-[300px_minmax(0,1fr)_340px] overflow-hidden">

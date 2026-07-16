@@ -105,7 +105,10 @@ export function AppHeader() {
     setIsDragging(false);
   }
 
-  if (/^\/problem\/[^/]+(?:\/recite)?$/.test(pathname)) {
+  if (
+    /^\/problem\/[^/]+(?:\/recite)?$/.test(pathname) ||
+    /^\/interview\/[^/]+(?:\/recite)?$/.test(pathname)
+  ) {
     return null;
   }
 

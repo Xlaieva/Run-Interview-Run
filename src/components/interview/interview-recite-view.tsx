@@ -8,6 +8,7 @@ import { InterviewQuestionPanel } from "./interview-question-panel";
 import { InterviewAnswerPanel } from "./interview-answer-panel";
 import { InterviewTimeline } from "./interview-timeline";
 import { InterviewChatInput } from "./interview-chat-input";
+import { ReciteCountdown } from "@/components/recite/recite-countdown";
 import type { InterviewQuestion, InterviewAttempt, InterviewChatMessage } from "@/db/schema";
 import { mergeInterviewTimeline } from "@/lib/types";
 
@@ -54,12 +55,12 @@ export function InterviewReciteView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b px-4 py-2">
+      <div className="flex select-none items-center gap-3 border-b px-4 py-2">
         <Link href="/interview" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" />
           返回
         </Link>
-        <span className="text-sm font-medium">{question.title} · 背题模式</span>
+        <ReciteCountdown redirectTo={`/interview/${question.id}`} />
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[1fr_1fr]">

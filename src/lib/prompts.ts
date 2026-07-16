@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Language, Solution } from "./types";
+import { INTERVIEW_CATEGORIES } from "./types";
 
 export const testCaseSchema = z.object({
   input: z
@@ -207,8 +208,10 @@ ${errorMessage ?? "(代码运行没有抛出异常，但结果大概率不正确
 
 export const interviewClassificationSchema = z.object({
   category: z
-    .string()
-    .describe("这道面试问答题所属的分类，如“系统设计”“项目经验”“行为面试”“计算机基础”，2-6个汉字"),
+    .enum(INTERVIEW_CATEGORIES)
+    .describe(
+      `这道面试问答题所属的分类，必须是「${INTERVIEW_CATEGORIES.join("」「")}」四者之一`,
+    ),
   standardAnswer: z
     .string()
     .describe(
@@ -218,7 +221,7 @@ export const interviewClassificationSchema = z.object({
 
 export function buildInterviewClassificationPrompt(title: string, description: string) {
   return `你是一个资深技术面试官。请阅读下面这道面试问答题，完成以下工作：
-1. 判断这道题所属的分类（如“系统设计”“项目经验”“行为面试”“计算机基础”等）
+1. 判断这道题所属的分类，只能从「${INTERVIEW_CATEGORIES.join("」「")}」这四类中选一个：题目描述里通常会提及这道题属于哪一类（比如提到"实习面试""项目里""前端八股""AI/大模型相关"等字眼），请优先从描述中提取；如果描述里没有明确提及，你需要自己根据题目内容判断最贴切的一类
 2. 给出一段口语化、连贯自然的标准回答，就像在面试里讲给面试官听一样，不要分点、不要堆砌术语
 
 题目标题：${title}
@@ -227,7 +230,7 @@ export function buildInterviewClassificationPrompt(title: string, description: s
 ${description}
 
 请以 JSON 格式输出，JSON 必须且只能包含以下英文字段名：
-- category: string，中文，2-6个汉字
+- category: string，只能是「${INTERVIEW_CATEGORIES.join("」「")}」四者之一
 - standardAnswer: string，中文，口语化的一段话，300字左右`;
 }
 

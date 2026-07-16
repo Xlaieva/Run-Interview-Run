@@ -43,11 +43,22 @@ export async function POST(req: NextRequest) {
       .where(eq(interviewQuestions.id, row.id))
       .returning();
 
+    let ts = Date.now();
+    const nextCreatedAt = () => new Date(ts++);
+
+    await db.insert(interviewChatMessages).values({
+      questionId: row.id,
+      role: "user",
+      content: title === userDescription ? title : `${title}\n\n${userDescription}`,
+      createdAt: nextCreatedAt(),
+    });
+
     if (object.standardAnswer) {
       await db.insert(interviewChatMessages).values({
         questionId: row.id,
         role: "assistant",
         content: object.standardAnswer,
+        createdAt: nextCreatedAt(),
       });
     }
 
@@ -62,8 +73,8 @@ export async function POST(req: NextRequest) {
         );
         answerFeedback = review.feedback;
         await db.insert(interviewChatMessages).values([
-          { questionId: row.id, role: "user", content: userAnswer },
-          { questionId: row.id, role: "assistant", content: review.feedback },
+          { questionId: row.id, role: "user", content: userAnswer, createdAt: nextCreatedAt() },
+          { questionId: row.id, role: "assistant", content: review.feedback, createdAt: nextCreatedAt() },
         ]);
       } catch (err) {
         console.error("Interview answer review failed", err);

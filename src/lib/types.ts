@@ -2,6 +2,9 @@ import type { InterviewAttempt, InterviewChatMessage } from "@/db/schema";
 
 export type ChatRole = "user" | "assistant";
 
+export const INTERVIEW_CATEGORIES = ["实习", "AI八股", "前端八股", "项目"] as const;
+export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
+
 export interface ChatMessage {
   role: ChatRole;
   content: string;

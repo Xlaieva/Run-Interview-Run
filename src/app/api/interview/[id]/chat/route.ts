@@ -62,11 +62,12 @@ export async function POST(
     );
   }
 
+  const now = new Date();
   const [userMsg, assistantMsg] = await db
     .insert(interviewChatMessages)
     .values([
-      { questionId: id, role: "user", content: message },
-      { questionId: id, role: "assistant", content: reply },
+      { questionId: id, role: "user", content: message, createdAt: now },
+      { questionId: id, role: "assistant", content: reply, createdAt: new Date(now.getTime() + 1) },
     ])
     .returning();
 

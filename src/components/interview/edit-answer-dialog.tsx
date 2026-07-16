@@ -12,11 +12,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type { InterviewQuestion } from "@/db/schema";
+import { INTERVIEW_CATEGORIES } from "@/lib/types";
 
 export function EditAnswerDialog({
   question,
@@ -92,7 +99,18 @@ export function EditAnswerDialog({
         <div className="grid gap-4 overflow-y-auto pr-1">
           <div className="grid gap-2">
             <Label htmlFor="edit-category">分类</Label>
-            <Input id="edit-category" value={category} onChange={(e) => setCategory(e.target.value)} disabled={submitting} />
+            <Select value={category} onValueChange={(value) => setCategory(value ?? "")} disabled={submitting}>
+              <SelectTrigger id="edit-category">
+                <SelectValue placeholder="选择分类" />
+              </SelectTrigger>
+              <SelectContent>
+                {INTERVIEW_CATEGORIES.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="edit-answer">标准答案</Label>
