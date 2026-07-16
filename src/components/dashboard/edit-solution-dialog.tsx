@@ -14,11 +14,20 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import type { Problem } from "@/db/schema";
 import type { JudgeMode } from "@/lib/types";
+
+const UNCATEGORIZED = "__uncategorized__";
 
 const CALL_MODE_PLACEHOLDER = `[
   { "input": [[2, 7, 11, 15], 9], "expected": [0, 1] },
@@ -48,9 +57,11 @@ const IDENTIFIER_PATTERN: Record<"typescript" | "python", RegExp> = {
 
 export function EditSolutionDialog({
   problem,
+  existingCategories = [],
   onUpdated,
 }: {
   problem: Problem;
+  existingCategories?: string[];
   onUpdated: (problem: Problem) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -74,6 +85,9 @@ export function EditSolutionDialog({
   const [submitting, setSubmitting] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const isPython = problem.language === "python";
+  const categoryOptions = Array.from(
+    new Set([...(problem.category ? [problem.category] : []), ...existingCategories]),
+  ).sort((a, b) => a.localeCompare(b, "zh"));
 
   function applyProblem(updated: Problem) {
     setCategory(updated.category ?? "");
@@ -185,13 +199,23 @@ export function EditSolutionDialog({
           <div className="flex items-end gap-2">
             <div className="grid flex-1 gap-2">
               <Label htmlFor="edit-category">分类</Label>
-              <Input
-                id="edit-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="例如：动态规划"
+              <Select
+                value={category || UNCATEGORIZED}
+                onValueChange={(value) => setCategory(value === UNCATEGORIZED ? "" : (value ?? ""))}
                 disabled={submitting || regenerating}
-              />
+              >
+                <SelectTrigger id="edit-category" className="w-full">
+                  <SelectValue placeholder="选择分类" />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  <SelectItem value={UNCATEGORIZED}>未分类</SelectItem>
+                  {categoryOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button
               variant="outline"

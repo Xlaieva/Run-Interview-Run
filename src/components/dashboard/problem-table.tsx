@@ -25,6 +25,10 @@ export function ProblemTable({
   onUpdated: (problem: Problem) => void;
   onDeleted: (id: string) => void;
 }) {
+  const existingCategories = Array.from(
+    new Set(problems.map((p) => p.category).filter((c): c is string => Boolean(c))),
+  ).sort((a, b) => a.localeCompare(b, "zh"));
+
   if (problems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-16 text-center text-muted-foreground">
@@ -110,7 +114,11 @@ export function ProblemTable({
               </TableCell>
               <TableCell className="text-center">
                 <div className="flex items-center justify-center gap-1">
-                  <EditSolutionDialog problem={p} onUpdated={onUpdated} />
+                  <EditSolutionDialog
+                    problem={p}
+                    existingCategories={existingCategories}
+                    onUpdated={onUpdated}
+                  />
                   <DeleteProblemButton
                     problemId={p.id}
                     problemTitle={p.title}
