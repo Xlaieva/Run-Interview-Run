@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Language } from "./types";
+import type { Language, Solution } from "./types";
 
 export const testCaseSchema = z.object({
   input: z
@@ -96,6 +96,79 @@ ${description}
   - timeComplexity: string，如 "O(n)"
   - spaceComplexity: string，如 "O(1)"
 - testCases: 数组，每项包含 input（严格按 functionSignature 参数顺序排列的数组，第1项对应第1个参数）和 expected（期望返回值），至少1组最多6组，来自题目描述中的示例`;
+}
+
+export const solutionReviewSchema = z.object({
+  hasIssue: z
+    .boolean()
+    .describe(
+      "用户自己写的解法思路是否存在问题：思路错误、会导致结果错误、遗漏重要边界条件，或复杂度明显劣于题目应有水平且并非用户刻意选择的简化实现。如果思路基本正确，只是描述简略或者和最优解不同但依然正确，就是 false",
+    ),
+  feedback: z
+    .string()
+    .describe(
+      "中文说明，仅当 hasIssue 为 true 时需要认真填写：指出思路的问题所在，给出具体的改进建议，并对涉及的专业术语（如“双指针”“回溯”“记忆化搜索”等）做简单解释，帮助用户理解；控制在250字左右。hasIssue 为 false 时留空字符串即可",
+    ),
+});
+
+export function buildSolutionReviewPrompt(options: {
+  title: string;
+  description: string;
+  userAnswer: string;
+  solutions: Solution[];
+}) {
+  const { title, description, userAnswer, solutions } = options;
+  const solutionsBlock = solutions
+    .map(
+      (s, i) =>
+        `解法${i + 1}（${s.approachName}，时间复杂度 ${s.timeComplexity}，空间复杂度 ${s.spaceComplexity}）：${s.approachSummary}`,
+    )
+    .join("\n");
+
+  return `你是一个耐心的算法教练。下面是一道题目、AI 给出的参考解法列表，以及用户自己写的解法思路。请判断用户的思路是否存在问题。
+
+题目：${title}
+${description}
+
+参考解法：
+${solutionsBlock}
+
+用户自己的解法思路：
+${userAnswer}
+
+请以 JSON 格式输出，JSON 必须且只能包含以下英文字段名：
+- hasIssue: boolean，用户的思路是否存在问题
+- feedback: string，中文。如果 hasIssue 为 true，说明问题所在、给出改进建议，并解释涉及的专业术语；如果为 false，留空字符串`;
+}
+
+export const interviewAnswerReviewSchema = z.object({
+  feedback: z
+    .string()
+    .describe(
+      "中文，像一位面试教练点评用户的回答：对比标准答案指出用户回答里遗漏或可以补充的要点，给出改进建议，并对回答中涉及或应该涉及的专业术语做简明解释；即使用户回答基本正确也要指出可以完善的地方，不要只说“回答正确”；控制在250字左右",
+    ),
+});
+
+export function buildInterviewAnswerReviewPrompt(options: {
+  title: string;
+  description: string;
+  standardAnswer: string | null;
+  userAnswer: string;
+}) {
+  const { title, description, standardAnswer, userAnswer } = options;
+  return `你是一位资深技术面试教练。下面是一道面试问答题、AI 给出的标准答案，以及用户自己写的回答。请对比两者，给用户一些点评。
+
+题目：${title}
+${description}
+
+标准答案：
+${standardAnswer ?? "（暂无标准答案）"}
+
+用户自己的回答：
+${userAnswer}
+
+请以 JSON 格式输出，JSON 必须且只能包含以下英文字段名：
+- feedback: string，中文，对比标准答案点评用户的回答，指出可以补充或改进的地方，并解释涉及的专业术语，250字左右`;
 }
 
 export const locateSchema = z.object({

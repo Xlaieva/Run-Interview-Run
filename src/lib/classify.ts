@@ -1,8 +1,13 @@
 import { generateObject } from "ai";
 import { qwen } from "@/lib/ai";
-import { classificationSchema, buildClassificationPrompt } from "@/lib/prompts";
+import {
+  classificationSchema,
+  buildClassificationPrompt,
+  solutionReviewSchema,
+  buildSolutionReviewPrompt,
+} from "@/lib/prompts";
 import { testCasesMatchSignature } from "@/lib/signature";
-import type { Language } from "@/lib/types";
+import type { Language, Solution } from "@/lib/types";
 
 /**
  * Classifies a problem, with one retry if the model's testCases don't match
@@ -34,5 +39,22 @@ export async function classifyProblem(
     }
   }
 
+  return object;
+}
+
+/**
+ * Judges whether the user's own solution approach (entered alongside the
+ * problem at creation time) has an issue, comparing it against the AI's
+ * generated solutions. Returns hasIssue=false with an empty feedback when
+ * the approach looks correct — the caller only surfaces feedback on true.
+ */
+export async function reviewUserSolution(
+  title: string,
+  description: string,
+  userAnswer: string,
+  solutions: Solution[],
+) {
+  const prompt = buildSolutionReviewPrompt({ title, description, userAnswer, solutions });
+  const { object } = await generateObject({ model: qwen, schema: solutionReviewSchema, prompt });
   return object;
 }

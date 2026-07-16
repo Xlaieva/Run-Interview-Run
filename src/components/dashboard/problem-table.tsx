@@ -41,11 +41,11 @@ export function ProblemTable({
             <TableHead>题目</TableHead>
             <TableHead>分类</TableHead>
             <TableHead>最优复杂度</TableHead>
-            <TableHead className="text-right">刷题次数</TableHead>
-            <TableHead className="text-right">一/二/三次成功</TableHead>
+            <TableHead>刷题次数</TableHead>
+            <TableHead>一/二/三次成功</TableHead>
             <TableHead>开始刷题</TableHead>
             <TableHead>被考察</TableHead>
-            <TableHead className="text-right">操作</TableHead>
+            <TableHead>操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -62,7 +62,7 @@ export function ProblemTable({
                   <span className="truncate">{p.title}</span>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-center">
                 {p.category ? (
                   <Badge variant="secondary">{p.category}</Badge>
                 ) : (
@@ -71,7 +71,7 @@ export function ProblemTable({
                   </Badge>
                 )}
               </TableCell>
-              <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+              <TableCell className="text-center font-mono text-xs text-muted-foreground whitespace-nowrap">
                 {p.solutions?.[0]
                   ? `${p.solutions[0].timeComplexity} / ${p.solutions[0].spaceComplexity}`
                   : "—"}
@@ -81,10 +81,10 @@ export function ProblemTable({
                   </span>
                 )}
               </TableCell>
-              <TableCell className="text-right tabular-nums">
+              <TableCell className="text-center tabular-nums">
                 {p.totalAttempts}
               </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
+              <TableCell className="text-center whitespace-nowrap">
                 <span className="inline-flex gap-1">
                   <Badge className="bg-emerald-600/15 text-emerald-500 border-emerald-600/30">
                     {p.successNoHintCount}
@@ -97,10 +97,10 @@ export function ProblemTable({
                   </Badge>
                 </span>
               </TableCell>
-              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+              <TableCell className="text-center text-xs text-muted-foreground whitespace-nowrap">
                 {formatDateTime(p.firstPracticeAt)}
               </TableCell>
-              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+              <TableCell className="text-center text-xs text-muted-foreground whitespace-nowrap">
                 {formatDateTime(p.lastReviewedAt)}
                 {p.reviewCount > 0 && (
                   <span className="ml-1 text-muted-foreground/70">
@@ -108,8 +108,8 @@ export function ProblemTable({
                   </span>
                 )}
               </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
+              <TableCell className="text-center">
+                <div className="flex items-center justify-center gap-1">
                   <EditSolutionDialog problem={p} onUpdated={onUpdated} />
                   <DeleteProblemButton
                     problemId={p.id}

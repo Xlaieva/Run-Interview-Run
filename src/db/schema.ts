@@ -38,6 +38,11 @@ export const problems = pgTable("problems", {
   /** Extracted from the problem description's examples; drives real judging (not just "no exception"). */
   testCases: jsonb("test_cases").$type<TestCase[]>(),
 
+  /** User's own solution approach, entered at creation time; stored verbatim, AI never rewrites it. */
+  userAnswer: text("user_answer"),
+  /** AI's critique of userAnswer against the generated solutions; only set when the AI found an issue. */
+  answerFeedback: text("answer_feedback"),
+
   totalAttempts: integer("total_attempts").notNull().default(0),
   successNoHintCount: integer("success_no_hint_count").notNull().default(0),
   success1HintCount: integer("success_1_hint_count").notNull().default(0),
@@ -84,6 +89,8 @@ export const interviewQuestions = pgTable("interview_questions", {
   category: text("category"),
   /** AI-generated, hand-editable single reference answer (spoken-style, same voice as Solution.verbalExplanation). */
   standardAnswer: text("standard_answer"),
+  /** User's own answer, entered at creation time; stored verbatim, AI never rewrites it. */
+  userAnswer: text("user_answer"),
 
   totalAttempts: integer("total_attempts").notNull().default(0),
   /** Most recent recording only — overwritten (and the old Blob file deleted) on every new attempt. */

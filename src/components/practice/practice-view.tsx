@@ -94,7 +94,14 @@ export function PracticeView({
   const [errorLines, setErrorLines] = useState<number[]>([]);
   const [hintLoading, setHintLoading] = useState(false);
   const [aiAvailable, setAiAvailable] = useState(true);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
+    initialProblem.userAnswer && initialProblem.answerFeedback
+      ? [
+          { role: "user", content: initialProblem.userAnswer },
+          { role: "assistant", content: initialProblem.answerFeedback },
+        ]
+      : [],
+  );
   const [chatSending, setChatSending] = useState(false);
   const [solutionRevealed, setSolutionRevealed] = useState(false);
   const [showDiff, setShowDiff] = useState(false);

@@ -40,35 +40,35 @@ export function QuestionTable({
           <TableRow>
             <TableHead>题目</TableHead>
             <TableHead>分类</TableHead>
-            <TableHead className="text-right">练习次数</TableHead>
+            <TableHead>练习次数</TableHead>
             <TableHead>上次练习</TableHead>
             <TableHead>被抽查</TableHead>
-            <TableHead className="text-right">操作</TableHead>
+            <TableHead>操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {questions.map((q) => (
             <TableRow key={q.id}>
-              <TableCell className="font-medium max-w-[260px]">
-                <span className="truncate">{q.title}</span>
+              <TableCell className="max-w-[340px] truncate font-medium">
+                {q.title}
               </TableCell>
-              <TableCell>
+              <TableCell className="text-center">
                 {q.category ? (
                   <Badge variant="secondary">{q.category}</Badge>
                 ) : (
                   <Badge variant="outline" className="text-muted-foreground">未分类</Badge>
                 )}
               </TableCell>
-              <TableCell className="text-right tabular-nums">{q.totalAttempts}</TableCell>
-              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+              <TableCell className="text-center tabular-nums">{q.totalAttempts}</TableCell>
+              <TableCell className="text-center text-xs text-muted-foreground whitespace-nowrap">
                 {formatDateTime(q.lastPracticedAt)}
               </TableCell>
-              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+              <TableCell className="text-center text-xs text-muted-foreground whitespace-nowrap">
                 {formatDateTime(q.lastReviewedAt)}
                 {q.reviewCount > 0 && <span className="ml-1 text-muted-foreground/70">×{q.reviewCount}</span>}
               </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
+              <TableCell className="text-center">
+                <div className="flex items-center justify-center gap-1">
                   <EditAnswerDialog question={q} onUpdated={onUpdated} />
                   <DeleteQuestionButton questionId={q.id} questionTitle={q.title} onDeleted={onDeleted} />
                   <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/interview/${q.id}/recite`}>背题</Link>} />

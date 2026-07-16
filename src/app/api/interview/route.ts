@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { interviewQuestions } from "@/db/schema";
+import { interviewQuestions, interviewChatMessages } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
-import { classifyInterviewQuestion } from "@/lib/classify-interview";
+import { classifyInterviewQuestion, reviewInterviewAnswer } from "@/lib/classify-interview";
 
 export async function GET() {
   const rows = await db
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const title = (body?.title ?? "").trim();
   const userDescription = (body?.userDescription ?? "").trim();
+  const userAnswer = typeof body?.userAnswer === "string" ? body.userAnswer.trim() : "";
 
   if (!title || !userDescription) {
     return NextResponse.json(
@@ -34,11 +35,42 @@ export async function POST(req: NextRequest) {
 
     const [updated] = await db
       .update(interviewQuestions)
-      .set({ category: object.category, standardAnswer: object.standardAnswer })
+      .set({
+        category: object.category,
+        standardAnswer: object.standardAnswer,
+        userAnswer: userAnswer || null,
+      })
       .where(eq(interviewQuestions.id, row.id))
       .returning();
 
-    return NextResponse.json(updated, { status: 201 });
+    if (object.standardAnswer) {
+      await db.insert(interviewChatMessages).values({
+        questionId: row.id,
+        role: "assistant",
+        content: object.standardAnswer,
+      });
+    }
+
+    let answerFeedback: string | null = null;
+    if (userAnswer) {
+      try {
+        const review = await reviewInterviewAnswer(
+          title,
+          userDescription,
+          object.standardAnswer,
+          userAnswer,
+        );
+        answerFeedback = review.feedback;
+        await db.insert(interviewChatMessages).values([
+          { questionId: row.id, role: "user", content: userAnswer },
+          { questionId: row.id, role: "assistant", content: review.feedback },
+        ]);
+      } catch (err) {
+        console.error("Interview answer review failed", err);
+      }
+    }
+
+    return NextResponse.json({ ...updated, answerFeedback }, { status: 201 });
   } catch (err) {
     console.error("Interview AI classification failed", err);
     return NextResponse.json(row, { status: 201 });

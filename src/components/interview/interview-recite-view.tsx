@@ -62,7 +62,7 @@ export function InterviewReciteView({
         <span className="text-sm font-medium">{question.title} · 背题模式</span>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[340px_1fr]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[1fr_1fr]">
         <div className="flex min-h-0 flex-col border-r">
           <InterviewQuestionPanel question={question} />
           <InterviewAnswerPanel question={question} />
