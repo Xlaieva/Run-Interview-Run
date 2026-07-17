@@ -115,8 +115,13 @@ export function EditSolutionDialog({
         toast.error(data?.error ?? "重新生成失败");
         return;
       }
-      applyProblem(data as Problem);
-      toast.success("已用 AI 重新生成解法");
+      const updated = data as Problem;
+      applyProblem(updated);
+      if (!updated.testCases || updated.testCases.length === 0) {
+        toast.warning("已用 AI 重新生成解法，但未能生成对得上函数签名的测试用例，请手动填写");
+      } else {
+        toast.success("已用 AI 重新生成解法");
+      }
     } catch {
       toast.error("网络错误，请检查连接后重试");
     } finally {

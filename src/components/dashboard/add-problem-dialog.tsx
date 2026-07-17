@@ -70,6 +70,10 @@ export function AddProblemDialog({
       onCreated(problem);
       if (!problem.category) {
         toast.warning("题目已保存，但 AI 分类暂时失败，可以在表格里手动编辑解法信息");
+      } else if (!problem.testCases || problem.testCases.length === 0) {
+        toast.warning(
+          "题目已添加，但 AI 未能生成对得上函数签名的测试用例，请在表格里手动编辑填写测试用例",
+        );
       } else {
         toast.success("题目已添加，AI 分类完成");
       }
