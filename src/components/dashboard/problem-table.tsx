@@ -38,7 +38,7 @@ export function ProblemTable({
   }
 
   return (
-    <div className="rounded-lg border overflow-x-auto">
+    <div className="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -49,7 +49,7 @@ export function ProblemTable({
             <TableHead>一/二/三次成功</TableHead>
             <TableHead>开始刷题</TableHead>
             <TableHead>被考察</TableHead>
-            <TableHead>操作</TableHead>
+            <TableHead className="sticky right-0 z-10 bg-background border-l">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -112,7 +112,7 @@ export function ProblemTable({
                   </span>
                 )}
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="sticky right-0 z-10 bg-background border-l text-center">
                 <div className="flex items-center justify-center gap-1">
                   <EditSolutionDialog
                     problem={p}

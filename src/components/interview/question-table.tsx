@@ -34,7 +34,7 @@ export function QuestionTable({
   }
 
   return (
-    <div className="rounded-lg border overflow-x-auto">
+    <div className="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -43,13 +43,13 @@ export function QuestionTable({
             <TableHead>练习次数</TableHead>
             <TableHead>上次练习</TableHead>
             <TableHead>被抽查</TableHead>
-            <TableHead>操作</TableHead>
+            <TableHead className="sticky right-0 z-10 bg-background border-l">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {questions.map((q) => (
             <TableRow key={q.id}>
-              <TableCell className="max-w-[340px] truncate font-medium">
+              <TableCell className="w-[100px] min-w-0 max-w-[200px] truncate font-medium">
                 {q.title}
               </TableCell>
               <TableCell className="text-center">
@@ -67,7 +67,7 @@ export function QuestionTable({
                 {formatDateTime(q.lastReviewedAt)}
                 {q.reviewCount > 0 && <span className="ml-1 text-muted-foreground/70">×{q.reviewCount}</span>}
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="sticky right-0 z-10 bg-background border-l text-center">
                 <div className="flex items-center justify-center gap-1">
                   <EditAnswerDialog question={q} onUpdated={onUpdated} />
                   <DeleteQuestionButton questionId={q.id} questionTitle={q.title} onDeleted={onDeleted} />
