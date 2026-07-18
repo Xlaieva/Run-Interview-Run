@@ -86,7 +86,7 @@ export function ProblemTable({
                 )}
               </TableCell>
               <TableCell className="text-center tabular-nums">
-                {p.totalAttempts}
+                {p.successNoHintCount + p.success1HintCount + p.success2HintCount}
               </TableCell>
               <TableCell className="text-center whitespace-nowrap">
                 <span className="inline-flex gap-1">
