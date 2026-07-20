@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, TimerOff, Timer as TimerIcon } from "lucide-react";
+import { Minus, Plus, TimerOff, Timer as TimerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const PRESETS = [5, 10, 15] as const;
+const PRESETS = [1, 3, 5, 10, 15] as const;
 
 function formatTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -26,7 +26,10 @@ export function ReciteCountdown({ redirectTo }: { redirectTo: string }) {
   const [running, setRunning] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const redirectToRef = useRef(redirectTo);
-  redirectToRef.current = redirectTo;
+
+  useEffect(() => {
+    redirectToRef.current = redirectTo;
+  }, [redirectTo]);
 
   useEffect(() => {
     if (!running) return;
@@ -61,6 +64,10 @@ export function ReciteCountdown({ redirectTo }: { redirectTo: string }) {
 
   function addOneMinute() {
     setRemainingSeconds((prev) => (prev === null ? prev : prev + 60));
+  }
+
+  function subtractThirtySeconds() {
+    setRemainingSeconds((prev) => (prev === null ? prev : Math.max(0, prev - 30)));
   }
 
   if (!running) {
@@ -103,6 +110,9 @@ export function ReciteCountdown({ redirectTo }: { redirectTo: string }) {
           <span className="min-w-11 text-center font-mono text-sm tabular-nums">
             {formatTime(remainingSeconds)}
           </span>
+          <Button variant="outline" size="icon-sm" onClick={subtractThirtySeconds} title="减少 30 秒">
+            <Minus />
+          </Button>
           <Button variant="outline" size="icon-sm" onClick={addOneMinute} title="增加 1 分钟">
             <Plus />
           </Button>
