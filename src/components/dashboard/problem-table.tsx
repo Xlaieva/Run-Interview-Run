@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -30,6 +30,8 @@ import type { Problem } from "@/db/schema";
 
 const ALL = "__all__";
 const UNCATEGORIZED = "未分类";
+const PAGE_SIZES = [5, 10, 15] as const;
+const DEFAULT_PAGE_SIZE = 10;
 
 function getComplexityLabel(p: Problem) {
   return p.solutions?.[0]
@@ -161,6 +163,8 @@ export function ProblemTable({
 }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [titleDraft, setTitleDraft] = useState("");
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [page, setPage] = useState(1);
 
   function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -232,6 +236,13 @@ export function ProblemTable({
     if (filters.reviewCount !== ALL && String(p.reviewCount) !== filters.reviewCount) return false;
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedRows = filteredRows.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   if (problems.length === 0) {
     return (
@@ -360,7 +371,7 @@ export function ProblemTable({
               </TableCell>
             </TableRow>
           ) : (
-            filteredRows.map((p) => (
+            paginatedRows.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="text-center text-xs text-muted-foreground tabular-nums">
                   {p.seq}
@@ -450,6 +461,55 @@ export function ProblemTable({
           )}
         </TableBody>
       </Table>
+      <div className="flex items-center justify-between gap-4 border-t px-3 py-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <span>每页</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => {
+              setPageSize(Number(v ?? DEFAULT_PAGE_SIZE));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger size="sm" className="w-16">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZES.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span>条</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span>
+            共 {filteredRows.length} 题 · 第 {currentPage} / {totalPages} 页
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage(currentPage - 1)}
+              title="上一页"
+            >
+              <ChevronLeft />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage(currentPage + 1)}
+              title="下一页"
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
