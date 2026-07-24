@@ -12,6 +12,7 @@ export function runCode(
     inputVariableNames?: string[] | null;
     testCases?: TestCase[] | null;
     judgeScript?: string | null;
+    mode?: "normal" | "acm";
   },
 ): Promise<RunResult> {
   return new Promise((resolve) => {
@@ -67,6 +68,7 @@ export function runCode(
       inputVariableNames: options?.inputVariableNames ?? undefined,
       testCases: options?.testCases ?? undefined,
       judgeScript: options?.judgeScript ?? undefined,
+      mode: options?.mode ?? undefined,
     });
   });
 }

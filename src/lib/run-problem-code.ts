@@ -4,11 +4,16 @@ import type { RunResult } from "./types";
 import type { Problem } from "@/db/schema";
 
 /** Dispatches to the TS or Python sandbox worker based on the problem's language. */
-export function runProblemCode(problem: Problem, code: string): Promise<RunResult> {
+export function runProblemCode(
+  problem: Problem,
+  code: string,
+  mode: "normal" | "acm" = "normal",
+): Promise<RunResult> {
   if (problem.language === "python") {
     return runPythonCode(code, {
       functionName: problem.functionName,
       testCases: problem.testCases,
+      mode,
     });
   }
 
@@ -18,5 +23,6 @@ export function runProblemCode(problem: Problem, code: string): Promise<RunResul
     inputVariableNames: problem.inputVariableNames,
     testCases: problem.testCases,
     judgeScript: problem.judgeScript,
+    mode,
   });
 }

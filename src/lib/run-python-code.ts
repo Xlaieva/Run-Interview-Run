@@ -19,6 +19,7 @@ export function runPythonCode(
   options?: {
     functionName?: string | null;
     testCases?: TestCase[] | null;
+    mode?: "normal" | "acm";
   },
 ): Promise<RunResult> {
   return new Promise((resolve) => {
@@ -68,6 +69,7 @@ export function runPythonCode(
       code,
       functionName: options?.functionName ?? undefined,
       testCases: options?.testCases ?? undefined,
+      mode: options?.mode ?? undefined,
     });
   });
 }
