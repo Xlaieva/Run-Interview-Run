@@ -19,6 +19,8 @@ export type JudgeMode = "call" | "log" | "spec";
 
 export type Language = "typescript" | "python";
 
+export type SolveMode = "normal" | "acm";
+
 /**
  * One way to solve the problem. `problems.solutions` stores these ordered
  * best-to-worst (by time complexity, then space complexity as tiebreaker) —

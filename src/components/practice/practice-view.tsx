@@ -25,7 +25,7 @@ import { SolutionReveal } from "./solution-reveal";
 import { DiffView } from "./diff-view";
 import { runProblemCode } from "@/lib/run-problem-code";
 import type { Problem } from "@/db/schema";
-import type { ChatMessage, RunResult } from "@/lib/types";
+import type { ChatMessage, RunResult, SolveMode } from "@/lib/types";
 
 const MODE_STORAGE_KEY = "problem-solve-mode";
 
@@ -47,7 +47,7 @@ def main():
 main()
 `;
 
-function buildStarterTemplate(problem: Problem, mode: "normal" | "acm"): string {
+function buildStarterTemplate(problem: Problem, mode: SolveMode): string {
   if (mode === "acm" && problem.judgeMode === "call") {
     return problem.language === "python" ? ACM_STARTER_PYTHON : ACM_STARTER_TS;
   }
@@ -130,12 +130,12 @@ export function PracticeView({
   const router = useRouter();
   const [problem, setProblem] = useState(initialProblem);
   const canToggleAcmMode =
-    initialProblem.judgeMode === "call" &&
-    !!initialProblem.functionName &&
-    (initialProblem.testCases?.length ?? 0) > 0;
-  const [mode, setMode] = useState<"normal" | "acm">("normal");
+    problem.judgeMode === "call" &&
+    !!problem.functionName &&
+    (problem.testCases?.length ?? 0) > 0;
+  const [mode, setMode] = useState<SolveMode>("normal");
   const [code, setCode] = useState(() => buildStarterTemplate(initialProblem, "normal"));
-  const [pendingMode, setPendingMode] = useState<"normal" | "acm" | null>(null);
+  const [pendingMode, setPendingMode] = useState<SolveMode | null>(null);
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [hintStage, setHintStage] = useState<HintStage>(0);
@@ -166,7 +166,7 @@ export function PracticeView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function requestModeChange(next: "normal" | "acm") {
+  function requestModeChange(next: SolveMode) {
     if (next === mode) return;
     const currentTemplate = buildStarterTemplate(problem, mode);
     if (code === currentTemplate) {
@@ -176,12 +176,15 @@ export function PracticeView({
     setPendingMode(next);
   }
 
-  function applyModeChange(next: "normal" | "acm") {
+  function applyModeChange(next: SolveMode) {
     setMode(next);
     setCode(buildStarterTemplate(problem, next));
     window.localStorage.setItem(MODE_STORAGE_KEY, next);
     setRunResult(null);
     setErrorLines([]);
+    setHintStage(0);
+    setSolutionRevealed(false);
+    setShowDiff(false);
   }
 
   const submitAttempt = useCallback(

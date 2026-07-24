@@ -6,7 +6,7 @@ import type { editor as MonacoEditor } from "monaco-editor";
 import { Button } from "@/components/ui/button";
 import { Play, Loader2, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Language, RunResult } from "@/lib/types";
+import type { Language, RunResult, SolveMode } from "@/lib/types";
 
 const MONACO_LANGUAGE: Record<Language, string> = {
   typescript: "typescript",
@@ -61,8 +61,8 @@ export function CodeEditorPanel({
   errorLines: number[];
   language: Language;
   showModeToggle: boolean;
-  mode: "normal" | "acm";
-  onModeChange: (mode: "normal" | "acm") => void;
+  mode: SolveMode;
+  onModeChange: (mode: SolveMode) => void;
 }) {
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
