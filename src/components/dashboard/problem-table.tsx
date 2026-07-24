@@ -365,7 +365,7 @@ export function ProblemTable({
                       size="sm"
                       variant="outline"
                       nativeButton={false}
-                      render={<Link href={`/problem/${p.id}/recite`}>背题</Link>}
+                      render={<Link href={`/problem/${p.id}/recite`}>巩固</Link>}
                     />
                     <Button
                       size="sm"

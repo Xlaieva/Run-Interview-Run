@@ -226,7 +226,7 @@ export function QuestionTable({
                   <div className="flex items-center justify-center gap-1">
                     <EditAnswerDialog question={q} onUpdated={onUpdated} />
                     <DeleteQuestionButton questionId={q.id} questionTitle={q.title} onDeleted={onDeleted} />
-                    <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/interview/${q.id}/recite`}>背题</Link>} />
+                    <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/interview/${q.id}/recite`}>巩固</Link>} />
                     <Button size="sm" nativeButton={false} render={<Link href={`/interview/${q.id}`}>练习</Link>} />
                   </div>
                 </TableCell>
