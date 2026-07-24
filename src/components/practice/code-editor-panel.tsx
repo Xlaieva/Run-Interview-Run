@@ -197,7 +197,7 @@ export function CodeEditorPanel({
                       ) : (
                         <X className="size-3 shrink-0 text-red-400" />
                       )}
-                      <span className="text-muted-foreground">
+                      <span className="whitespace-pre-wrap text-muted-foreground">
                         {tc.name
                           ? `用例 ${i + 1}：${tc.name}`
                           : `用例 ${i + 1}：输入 ${formatValue(tc.input)}`}
