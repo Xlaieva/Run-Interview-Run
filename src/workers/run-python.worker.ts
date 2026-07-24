@@ -1,10 +1,12 @@
 import { loadPyodide, type PyodideAPI } from "pyodide";
 import type { RunLogLine, RunResult, TestCase, TestCaseResult } from "@/lib/types";
+import { buildAcmStdin, buildAcmExpectedOutput, normalizeAcmOutput } from "@/lib/acm-io";
 
 interface RunMessage {
   code: string;
   functionName?: string;
   testCases?: TestCase[];
+  mode?: "normal" | "acm";
 }
 
 const VALID_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -45,10 +47,82 @@ print(${JSON.stringify(RESULT_MARKER)} + __json.dumps(__results))
 `;
 }
 
+/**
+ * ACM 模式：真实的 input()/sys.stdin 完全不用改——用 pyodide.setStdin 逐字符喂
+ * 数据，这是 Pyodide 官方推荐的"固定 stdin 文本"写法。每个测试用例单独用一份
+ * 全新的 globals 跑一次（避免上一个用例的变量/状态残留），print() 输出已经
+ * 有现成的 setStdout 捕获机制，拼起来跟期望文本精确比对。
+ */
+async function runAcmMode(
+  pyodide: PyodideAPI,
+  code: string,
+  testCases: TestCase[],
+): Promise<RunResult> {
+  const testResults: TestCaseResult[] = [];
+  const nonLogLines: RunLogLine[] = [];
+
+  for (const tc of testCases) {
+    const stdinText = buildAcmStdin(tc.input);
+    const expectedText = buildAcmExpectedOutput(tc.expected);
+    let cursor = 0;
+
+    pyodide.setStdin({
+      stdin: () => (cursor < stdinText.length ? stdinText.charCodeAt(cursor++) : null),
+    });
+
+    const caseLogs: RunLogLine[] = [];
+    pyodide.setStdout({
+      batched: (msg: string) => {
+        if (msg.length > 0) caseLogs.push({ level: "log", text: msg });
+      },
+    });
+    pyodide.setStderr({
+      batched: (msg: string) => {
+        if (msg.length > 0) caseLogs.push({ level: "error", text: msg });
+      },
+    });
+
+    const globals = pyodide.toPy({});
+    try {
+      await pyodide.runPythonAsync(code, { globals });
+      const actualText = caseLogs
+        .filter((l) => l.level === "log")
+        .map((l) => l.text)
+        .join("\n");
+      testResults.push({
+        input: stdinText,
+        expected: expectedText,
+        actual: actualText,
+        passed: normalizeAcmOutput(actualText) === normalizeAcmOutput(expectedText),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      testResults.push({
+        input: stdinText,
+        expected: expectedText,
+        passed: false,
+        error: message,
+      });
+    } finally {
+      globals.destroy();
+      nonLogLines.push(...caseLogs.filter((l) => l.level !== "log"));
+    }
+  }
+
+  return {
+    ok: testResults.length > 0 && testResults.every((r) => r.passed),
+    logs: nonLogLines,
+    error: null,
+    testResults,
+  };
+}
+
 self.onmessage = async (event: MessageEvent<RunMessage>) => {
-  const { code, functionName, testCases } = event.data;
+  const { code, functionName, testCases, mode } = event.data;
   const logs: RunLogLine[] = [];
   let resultLine: string | null = null;
+
+  const canAcmMode = mode === "acm" && Array.isArray(testCases) && testCases.length > 0;
 
   const structuredMode =
     !!functionName &&
@@ -58,6 +132,12 @@ self.onmessage = async (event: MessageEvent<RunMessage>) => {
 
   try {
     const pyodide = await getPyodide();
+
+    if (canAcmMode) {
+      const result = await runAcmMode(pyodide, code, testCases!);
+      self.postMessage(result);
+      return;
+    }
 
     pyodide.setStdout({
       batched: (msg: string) => {
