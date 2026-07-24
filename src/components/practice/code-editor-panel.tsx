@@ -6,7 +6,7 @@ import type { editor as MonacoEditor } from "monaco-editor";
 import { Button } from "@/components/ui/button";
 import { Play, Loader2, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Language, RunResult } from "@/lib/types";
+import type { Language, RunResult, SolveMode } from "@/lib/types";
 
 const MONACO_LANGUAGE: Record<Language, string> = {
   typescript: "typescript",
@@ -49,6 +49,9 @@ export function CodeEditorPanel({
   runResult,
   errorLines,
   language,
+  showModeToggle,
+  mode,
+  onModeChange,
 }: {
   code: string;
   onChange: (value: string) => void;
@@ -57,6 +60,9 @@ export function CodeEditorPanel({
   runResult: RunResult | null;
   errorLines: number[];
   language: Language;
+  showModeToggle: boolean;
+  mode: SolveMode;
+  onModeChange: (mode: SolveMode) => void;
 }) {
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -89,7 +95,31 @@ export function CodeEditorPanel({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-xs text-muted-foreground">{LANGUAGE_LABEL[language]}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{LANGUAGE_LABEL[language]}</span>
+          {showModeToggle && (
+            <div className="flex items-center overflow-hidden rounded-md border">
+              <Button
+                type="button"
+                size="sm"
+                variant={mode === "normal" ? "default" : "ghost"}
+                className="h-6 rounded-none px-2 text-[0.7rem]"
+                onClick={() => onModeChange("normal")}
+              >
+                普通模式
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={mode === "acm" ? "default" : "ghost"}
+                className="h-6 rounded-none px-2 text-[0.7rem]"
+                onClick={() => onModeChange("acm")}
+              >
+                ACM 模式
+              </Button>
+            </div>
+          )}
+        </div>
         <Button size="sm" onClick={onRun} disabled={running}>
           {running ? (
             <Loader2 className="size-4 animate-spin" />
@@ -167,7 +197,7 @@ export function CodeEditorPanel({
                       ) : (
                         <X className="size-3 shrink-0 text-red-400" />
                       )}
-                      <span className="text-muted-foreground">
+                      <span className="whitespace-pre-wrap text-muted-foreground">
                         {tc.name
                           ? `用例 ${i + 1}：${tc.name}`
                           : `用例 ${i + 1}：输入 ${formatValue(tc.input)}`}

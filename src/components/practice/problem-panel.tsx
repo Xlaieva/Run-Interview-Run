@@ -4,13 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EditSolutionDialog } from "@/components/dashboard/edit-solution-dialog";
 import type { Problem } from "@/db/schema";
+import { describeAcmFormat } from "@/lib/acm-io";
+import type { SolveMode } from "@/lib/types";
 
 export function ProblemPanel({
   problem,
   onUpdated,
+  mode,
 }: {
   problem: Problem;
   onUpdated: (problem: Problem) => void;
+  mode: SolveMode;
 }) {
   const best = problem.solutions?.[0];
 
@@ -44,6 +48,20 @@ export function ProblemPanel({
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 px-4 py-4 text-sm leading-relaxed">
           <p className="whitespace-pre-wrap">{problem.userDescription}</p>
+          {mode === "acm" && problem.judgeMode === "call" && (
+            <div className="rounded-md border bg-muted/40 p-3">
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                输入输出格式说明（ACM 模式）
+              </p>
+              <p className="whitespace-pre-wrap font-mono text-xs">
+                {describeAcmFormat(
+                  problem.functionSignature,
+                  problem.testCases?.[0]?.input,
+                  problem.testCases?.[0]?.expected,
+                )}
+              </p>
+            </div>
+          )}
           {problem.solutions && problem.solutions.length > 0 && (
             <div className="flex flex-col gap-2">
               <p className="text-xs font-medium text-muted-foreground">
