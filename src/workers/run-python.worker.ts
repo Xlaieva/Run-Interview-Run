@@ -64,10 +64,11 @@ async function runAcmMode(
   for (const tc of testCases) {
     const stdinText = buildAcmStdin(tc.input);
     const expectedText = buildAcmExpectedOutput(tc.expected);
+    const stdinBytes = new TextEncoder().encode(stdinText);
     let cursor = 0;
 
     pyodide.setStdin({
-      stdin: () => (cursor < stdinText.length ? stdinText.charCodeAt(cursor++) : null),
+      stdin: () => (cursor < stdinBytes.length ? stdinBytes[cursor++] : null),
     });
 
     const caseLogs: RunLogLine[] = [];
@@ -82,9 +83,31 @@ async function runAcmMode(
       },
     });
 
-    const globals = pyodide.toPy({});
+    const globals = pyodide.toPy({ __name__: "__main__" });
     try {
       await pyodide.runPythonAsync(code, { globals });
+      // Pyodide's `batched` stdout/stderr writer buffers any trailing bytes
+      // that don't end in a newline in its OWN JS-side buffer, separate from
+      // CPython's io buffering. sys.stdout.flush()/sys.stderr.flush() only
+      // pushes CPython's buffer down to that JS writer — it does NOT drain
+      // the JS writer's own held-back partial line. Only calling fsync() on
+      // the underlying fd (which Pyodide wires to the writer's fsync method)
+      // actually flushes that last unterminated chunk out to the callback.
+      // Confirmed empirically: flush() alone drops a trailing `print(x,
+      // end="")`; flush() + os.fsync() recovers it.
+      await pyodide.runPythonAsync(
+        [
+          "import sys as __acm_sys, os as __acm_os",
+          "__acm_sys.stdout.flush()",
+          "__acm_sys.stderr.flush()",
+          "for __acm_fd in (__acm_sys.stdout.fileno(), __acm_sys.stderr.fileno()):",
+          "    try:",
+          "        __acm_os.fsync(__acm_fd)",
+          "    except OSError:",
+          "        pass",
+        ].join("\n"),
+        { globals },
+      );
       const actualText = caseLogs
         .filter((l) => l.level === "log")
         .map((l) => l.text)
@@ -153,6 +176,10 @@ self.onmessage = async (event: MessageEvent<RunMessage>) => {
         if (msg.length > 0) logs.push({ level: "error", text: msg });
       },
     });
+    // Non-ACM problems never expect stdin input — reset it so a previous ACM
+    // run's exhausted byte-cursor closure (Pyodide's instance is persistent
+    // across runs, see getPyodide()) doesn't leak into this run.
+    pyodide.setStdin({ stdin: () => null });
 
     if (structuredMode) {
       // Fresh globals per run — otherwise function/variable definitions from
