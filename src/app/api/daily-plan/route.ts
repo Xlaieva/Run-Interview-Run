@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, count, eq, gte, lt } from "drizzle-orm";
+import { and, count, countDistinct, eq, gte, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { attemptLogs, interviewAttempts, dailyPlans } from "@/db/schema";
 import { classifyDailyPlan } from "@/lib/classify-daily-plan";
@@ -9,15 +9,19 @@ import { classifyDailyPlan } from "@/lib/classify-daily-plan";
  * ISO instants computed client-side from the browser's local calendar day —
  * doing the day-boundary math on the client avoids server/client timezone
  * mismatches (the server has no idea what timezone the user is in).
+ *
+ * problemsAttempted/problemsPassed count distinct problems, not raw attempt
+ * rows — running (or passing) the same problem multiple times today still
+ * only counts once, matching "点开题目 + 点过运行" as a per-problem yes/no.
  */
 async function getProgress(rangeStart: Date, rangeEnd: Date) {
   const [[problemsRow], [passedRow], [interviewRow]] = await Promise.all([
     db
-      .select({ value: count() })
+      .select({ value: countDistinct(attemptLogs.problemId) })
       .from(attemptLogs)
       .where(and(gte(attemptLogs.createdAt, rangeStart), lt(attemptLogs.createdAt, rangeEnd))),
     db
-      .select({ value: count() })
+      .select({ value: countDistinct(attemptLogs.problemId) })
       .from(attemptLogs)
       .where(
         and(
