@@ -403,7 +403,7 @@ export function PracticeView({
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr_340px]">
-        <ProblemPanel problem={problem} onUpdated={setProblem} />
+        <ProblemPanel problem={problem} onUpdated={setProblem} mode={mode} />
 
         <div className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1">
