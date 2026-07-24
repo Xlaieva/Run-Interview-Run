@@ -381,10 +381,26 @@ async function runLegacy(code: string): Promise<RunResult> {
  * ACM 模式：每个测试用例单独跑一次全新的 executeScript（不共享全局状态，模拟
  * 真实 ACM 判题"一个测试点一个全新进程"），注入一个全局同步 readline()（不是
  * 真实的 Node process.stdin 事件流程——判题时输入本来就是一次性全量已知的，没
- * 有对应的真实收益），把用户完整程序的打印输出跟期望文本做精确比对。
+ * 有对应的真实收益），把用户完整程序的打印输出跟期望文本做归一化后比对。
+ *
+ * harness 不引用任何测试用例数据（readline 只是按名字读取全局
+ * self.__stdinLines），所以 harness + code 在每次迭代里都是同一份源码——
+ * transpile 只需要在循环外做一次；只有 executeScript 才需要每个测试用例单独
+ * 跑一次全新的沙箱执行。
  */
 async function runAcmMode(code: string, testCases: TestCase[]): Promise<RunResult> {
+  const harness = `
+function readline() {
+  return self.__stdinLines.length ? self.__stdinLines.shift() : undefined;
+}
+`;
+
+  // 只 transpile 一次：让语法错误直接抛给外层 self.onmessage 的 catch，跟
+  // runCallMode/runSpecMode/runLegacy 一致，避免每个测试用例都重复报同一个错误。
+  const outputText = transpile(harness + "\n" + code);
+
   const testResults: TestCaseResult[] = [];
+  const nonLogLines: RunLogLine[] = [];
 
   for (const tc of testCases) {
     const stdinText = buildAcmStdin(tc.input);
@@ -392,47 +408,33 @@ async function runAcmMode(code: string, testCases: TestCase[]): Promise<RunResul
     const stdinLines = stdinText.length ? stdinText.split("\n") : [];
     (self as unknown as { __stdinLines: string[] }).__stdinLines = stdinLines;
 
-    const harness = `
-function readline() {
-  return self.__stdinLines.length ? self.__stdinLines.shift() : undefined;
-}
-`;
+    const exec = await executeScript(outputText);
+    nonLogLines.push(...exec.logs.filter((l) => l.level !== "log"));
 
-    try {
-      const outputText = transpile(harness + "\n" + code);
-      const exec = await executeScript(outputText);
-      if (exec.thrown) {
-        testResults.push({
-          input: stdinText,
-          expected: expectedText,
-          passed: false,
-          error: exec.thrown.message,
-        });
-        continue;
-      }
-      const actualText = exec.logs
-        .filter((l) => l.level === "log")
-        .map((l) => l.text)
-        .join("\n");
-      testResults.push({
-        input: stdinText,
-        expected: expectedText,
-        actual: actualText,
-        passed: normalizeAcmOutput(actualText) === normalizeAcmOutput(expectedText),
-      });
-    } catch (err) {
+    if (exec.thrown) {
       testResults.push({
         input: stdinText,
         expected: expectedText,
         passed: false,
-        error: err instanceof Error ? err.message : String(err),
+        error: exec.thrown.message,
       });
+      continue;
     }
+    const actualText = exec.logs
+      .filter((l) => l.level === "log")
+      .map((l) => l.text)
+      .join("\n");
+    testResults.push({
+      input: stdinText,
+      expected: expectedText,
+      actual: actualText,
+      passed: normalizeAcmOutput(actualText) === normalizeAcmOutput(expectedText),
+    });
   }
 
   return {
     ok: testResults.length > 0 && testResults.every((r) => r.passed),
-    logs: [],
+    logs: nonLogLines,
     error: null,
     testResults,
   };
