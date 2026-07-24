@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { AppHeader } from "@/components/shell/app-header";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { MascotWidget } from "@/components/mascot/mascot-widget";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,6 +50,7 @@ export default function RootLayout({
           <ThemeToggle />
           <div className="flex min-h-0 flex-1 flex-col">{children}</div>
           <Toaster richColors position="top-center" />
+          <MascotWidget />
         </TooltipProvider>
       </body>
     </html>
