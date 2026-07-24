@@ -39,6 +39,84 @@ function formatArg(arg: unknown): string {
   }
 }
 
+/**
+ * `self.postMessage` serializes its argument with the structured clone
+ * algorithm, which throws `DataCloneError` on anything containing a live
+ * function/symbol (e.g. a "design" problem like LRU Cache whose adapter
+ * returns `{ get: (key) => cache.get(key), put: ... }` — the returned
+ * closures end up as `actual` in a TestCaseResult). Recursively replaces any
+ * non-cloneable value with the same safe string form `formatArg` already
+ * uses for console-log output, so postMessage always succeeds. Only invoked
+ * as a fallback when a direct postMessage attempt throws (see self.onmessage
+ * below), so the overwhelmingly common already-cloneable case is untouched.
+ */
+function sanitizeForClone(value: unknown, seen = new WeakMap<object, unknown>()): unknown {
+  if (typeof value === "function" || typeof value === "symbol") {
+    return formatArg(value);
+  }
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (seen.has(value)) return seen.get(value);
+  if (value instanceof Date || value instanceof RegExp) return value;
+  if (value instanceof Error) {
+    return { name: value.name, message: value.message, stack: value.stack };
+  }
+  if (Array.isArray(value)) {
+    const out: unknown[] = [];
+    seen.set(value, out);
+    for (const item of value) out.push(sanitizeForClone(item, seen));
+    return out;
+  }
+  if (value instanceof Map) {
+    const out = new Map<unknown, unknown>();
+    seen.set(value, out);
+    for (const [k, v] of value) out.set(sanitizeForClone(k, seen), sanitizeForClone(v, seen));
+    return out;
+  }
+  if (value instanceof Set) {
+    const out = new Set<unknown>();
+    seen.set(value, out);
+    for (const v of value) out.add(sanitizeForClone(v, seen));
+    return out;
+  }
+  // Plain object or class instance (e.g. a design-problem adapter returning
+  // `{ get: fn, put: fn }`) — copy own enumerable properties, sanitizing each.
+  const out: Record<string, unknown> = {};
+  seen.set(value, out);
+  for (const key of Object.keys(value as Record<string, unknown>)) {
+    try {
+      out[key] = sanitizeForClone((value as Record<string, unknown>)[key], seen);
+    } catch (err) {
+      out[key] = formatArg(err);
+    }
+  }
+  return out;
+}
+
+/**
+ * Posts `result` to the main thread, falling back to a sanitized (all
+ * closures/symbols stringified) copy if the direct post throws
+ * DataCloneError. See `sanitizeForClone` for why that can happen.
+ */
+function postResult(result: RunResult): void {
+  try {
+    self.postMessage(result);
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "DataCloneError") {
+      try {
+        self.postMessage(sanitizeForClone(result) as RunResult);
+        return;
+      } catch {
+        // fall through to the generic failure below
+      }
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    const name = err instanceof Error ? err.name : "Error";
+    self.postMessage({ ok: false, logs: [], error: { name, message } } satisfies RunResult);
+  }
+}
+
 function deepEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (typeof a !== typeof b) return false;
@@ -479,7 +557,7 @@ self.onmessage = async (event: MessageEvent<RunMessage>) => {
     } else {
       result = await runLegacy(code);
     }
-    self.postMessage(result);
+    postResult(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const name = err instanceof Error ? err.name : "Error";
