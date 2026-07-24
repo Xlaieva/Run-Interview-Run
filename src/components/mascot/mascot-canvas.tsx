@@ -46,6 +46,10 @@ function RobotModel({ action, color }: { action: MascotAction; color?: string })
   }, [actions]);
 
   // 手势动作：播放一次后自动淡出回到 Idle。
+  // three.js 的 AnimationAction 是命令式、可变的原生对象（reset/play/fadeIn 等本身就是
+  // 会修改自身状态的方法调用），并非 React 管理的状态——这是 drei useAnimations 官方推荐
+  // 的驱动动画方式，因此这里针对 react-hooks/immutability 规则做局部豁免。
+  /* eslint-disable react-hooks/immutability */
   useEffect(() => {
     const next = action;
     const prev = currentActionRef.current;
@@ -70,6 +74,7 @@ function RobotModel({ action, color }: { action: MascotAction; color?: string })
 
     return () => window.clearTimeout(timer);
   }, [action, actions]);
+  /* eslint-enable react-hooks/immutability */
 
   return <primitive ref={group} object={scene} scale={0.9} position={[0, -1, 0]} />;
 }

@@ -80,9 +80,14 @@ export function MascotWidget() {
   const bubbleHideTimerRef = useRef<number | undefined>(undefined);
   const dwellAnnouncedRef = useRef(false);
   const progressRef = useRef(progress);
-  progressRef.current = progress;
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
   useEffect(() => {
+    // 位置依赖 window/localStorage，只能在客户端挂载后计算（SSR 阶段没有 window），
+    // 这是标准的"客户端专属初始化"效果，故对 react-hooks/set-state-in-effect 规则做局部豁免。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPosition(loadPosition());
     setMounted(true);
   }, []);
@@ -156,7 +161,7 @@ export function MascotWidget() {
     }
     setPosition(clampPosition({ top: drag.startTop + dy, left: drag.startLeft + dx }));
   }
-  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+  function handlePointerUp() {
     const drag = dragRef.current;
     setDragging(false);
     dragRef.current = null;

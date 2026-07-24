@@ -66,6 +66,9 @@ export function useDailyProgress() {
   }, []);
 
   useEffect(() => {
+    // 挂载时拉取"今天"的计划/进度数据——setState 发生在网络请求返回之后（异步回调里），
+    // 是"订阅外部数据源"这类 effect 的标准写法，故对 react-hooks/set-state-in-effect 规则做局部豁免。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchToday();
   }, [fetchToday]);
 
