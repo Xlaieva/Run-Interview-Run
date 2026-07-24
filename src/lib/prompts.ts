@@ -277,3 +277,42 @@ ${historyBlock}
 
 回答用中文，语气专业但友善。回复时可以参考历史记录里用户的进步或反复出现的问题，帮助用户看到自己的变化趋势。`;
 }
+
+export const dailyPlanSchema = z.object({
+  problemsTarget: z
+    .number()
+    .int()
+    .min(0)
+    .nullable()
+    .describe(
+      "用户计划完成的代码刷题数量目标；只有文本里明确提到具体数字才填，没提到就返回 null，绝对不要自己臆造一个数字",
+    ),
+  interviewTarget: z
+    .number()
+    .int()
+    .min(0)
+    .nullable()
+    .describe(
+      "用户计划完成的面试问答练习数量目标；只有文本里明确提到具体数字才填，没提到就返回 null，绝对不要自己臆造一个数字",
+    ),
+  summary: z
+    .string()
+    .describe("用一句话（20个汉字以内）总结这个计划，语气积极鼓励，适合展示在吉祥物的对话气泡里"),
+});
+
+export function buildDailyPlanPrompt(planText: string): string {
+  return `用户写下了今天的学习计划，请你完成三件事：
+1. 判断文本里有没有明确提到"要刷几道代码题"这样的具体数字，有就填 problemsTarget，没有明确数字就填 null，不要自己猜一个数字凑数。
+2. 判断文本里有没有明确提到"要练习几道面试问答题"这样的具体数字，有就填 interviewTarget，没有明确数字就填 null。
+3. 用一句话（20个汉字以内、语气积极鼓励）总结这个计划，作为 summary，会展示在吉祥物的对话气泡里。
+
+用户的今日计划原文：
+"""
+${planText}
+"""
+
+请以 JSON 格式输出，JSON 必须且只能包含以下英文字段名：
+- problemsTarget: number | null，代码刷题数量目标，没有明确数字就是 null
+- interviewTarget: number | null，面试问答练习数量目标，没有明确数字就是 null
+- summary: string，中文，20个汉字以内的积极鼓励总结`;
+}
