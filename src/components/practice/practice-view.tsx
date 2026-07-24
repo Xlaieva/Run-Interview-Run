@@ -1,12 +1,22 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ProblemPanel } from "./problem-panel";
 import { CodeEditorPanel } from "./code-editor-panel";
 import { ChatPanel } from "./chat-panel";
@@ -17,7 +27,31 @@ import { runProblemCode } from "@/lib/run-problem-code";
 import type { Problem } from "@/db/schema";
 import type { ChatMessage, RunResult } from "@/lib/types";
 
-function buildStarterTemplate(problem: Problem): string {
+const MODE_STORAGE_KEY = "problem-solve-mode";
+
+const ACM_STARTER_TS = `// ACM 模式：readline() 每次返回下一行输入（string），没有更多输入时返回 undefined
+// main() 里自己读取输入、计算，并用 console.log 打印结果
+
+function main() {
+
+}
+
+main();
+`;
+
+const ACM_STARTER_PYTHON = `# ACM 模式：用 input() 逐行读取输入，用 print() 打印结果
+def main():
+    pass
+
+
+main()
+`;
+
+function buildStarterTemplate(problem: Problem, mode: "normal" | "acm"): string {
+  if (mode === "acm" && problem.judgeMode === "call") {
+    return problem.language === "python" ? ACM_STARTER_PYTHON : ACM_STARTER_TS;
+  }
+
   if (problem.language === "python") {
     if (problem.functionSignature) {
       return `${problem.functionSignature}\n    # 在这里编写你的解法\n    pass\n`;
@@ -95,7 +129,13 @@ export function PracticeView({
 }) {
   const router = useRouter();
   const [problem, setProblem] = useState(initialProblem);
-  const [code, setCode] = useState(() => buildStarterTemplate(initialProblem));
+  const canToggleAcmMode =
+    initialProblem.judgeMode === "call" &&
+    !!initialProblem.functionName &&
+    (initialProblem.testCases?.length ?? 0) > 0;
+  const [mode, setMode] = useState<"normal" | "acm">("normal");
+  const [code, setCode] = useState(() => buildStarterTemplate(initialProblem, "normal"));
+  const [pendingMode, setPendingMode] = useState<"normal" | "acm" | null>(null);
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [hintStage, setHintStage] = useState<HintStage>(0);
@@ -113,6 +153,36 @@ export function PracticeView({
   const [chatSending, setChatSending] = useState(false);
   const [solutionRevealed, setSolutionRevealed] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
+
+  useEffect(() => {
+    if (!canToggleAcmMode) return;
+    const saved = window.localStorage.getItem(MODE_STORAGE_KEY);
+    if (saved !== "acm") return;
+    // 首次挂载时按上次记住的偏好切一次起始模板——依赖 window/localStorage，
+    // 只能在客户端挂载后计算，故对 react-hooks/set-state-in-effect 规则做局部豁免。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMode("acm");
+    setCode(buildStarterTemplate(initialProblem, "acm"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function requestModeChange(next: "normal" | "acm") {
+    if (next === mode) return;
+    const currentTemplate = buildStarterTemplate(problem, mode);
+    if (code === currentTemplate) {
+      applyModeChange(next);
+      return;
+    }
+    setPendingMode(next);
+  }
+
+  function applyModeChange(next: "normal" | "acm") {
+    setMode(next);
+    setCode(buildStarterTemplate(problem, next));
+    window.localStorage.setItem(MODE_STORAGE_KEY, next);
+    setRunResult(null);
+    setErrorLines([]);
+  }
 
   const submitAttempt = useCallback(
     async (passed: boolean, stage: HintStage) => {
@@ -141,7 +211,7 @@ export function PracticeView({
 
   const executeRun = useCallback(async () => {
     setRunning(true);
-    const result = await runProblemCode(problem, code);
+    const result = await runProblemCode(problem, code, mode);
     setRunning(false);
     setRunResult(result);
     if (result.ok) {
@@ -157,7 +227,7 @@ export function PracticeView({
       setShowDiff(false);
     }
     return result;
-  }, [code, hintStage, submitAttempt, problem]);
+  }, [code, hintStage, submitAttempt, problem, mode]);
 
   async function handleDegradedHint() {
     setHintLoading(true);
@@ -342,6 +412,9 @@ export function PracticeView({
               runResult={runResult}
               errorLines={errorLines}
               language={problem.language}
+              showModeToggle={canToggleAcmMode}
+              mode={mode}
+              onModeChange={requestModeChange}
             />
           </div>
           <div className="border-t">
@@ -380,6 +453,34 @@ export function PracticeView({
           onRetryAi={() => setAiAvailable(true)}
         />
       </div>
+
+      <AlertDialog
+        open={pendingMode !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingMode(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>切换模式会重置当前代码</AlertDialogTitle>
+            <AlertDialogDescription>
+              切换到{pendingMode === "acm" ? "ACM 模式" : "普通模式"}
+              后，编辑器里的代码会被重置成新模式的起始模板，当前写的代码会丢失，确定要切换吗？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingMode(null)}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingMode) applyModeChange(pendingMode);
+                setPendingMode(null);
+              }}
+            >
+              确定切换
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
