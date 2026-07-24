@@ -27,9 +27,11 @@ import { INTERVIEW_CATEGORIES } from "@/lib/types";
 
 export function EditAnswerDialog({
   question,
+  existingCategories = [],
   onUpdated,
 }: {
   question: InterviewQuestion;
+  existingCategories?: string[];
   onUpdated: (question: InterviewQuestion) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -37,6 +39,17 @@ export function EditAnswerDialog({
   const [standardAnswer, setStandardAnswer] = useState(question.standardAnswer ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+
+  // Merge the four broad buckets (what AI classification produces) with
+  // whatever fine-grained categories (前端八股-JS, ...) are already in use,
+  // so editing a doc-seeded question doesn't lose its current category.
+  const categoryOptions = Array.from(
+    new Set([
+      ...INTERVIEW_CATEGORIES,
+      ...existingCategories,
+      ...(question.category ? [question.category] : []),
+    ]),
+  ).sort((a, b) => a.localeCompare(b, "zh"));
 
   async function handleSave() {
     setSubmitting(true);
@@ -104,7 +117,7 @@ export function EditAnswerDialog({
                 <SelectValue placeholder="选择分类" />
               </SelectTrigger>
               <SelectContent>
-                {INTERVIEW_CATEGORIES.map((option) => (
+                {categoryOptions.map((option) => (
                   <SelectItem key={option} value={option}>
                     {option}
                   </SelectItem>

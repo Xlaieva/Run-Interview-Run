@@ -224,7 +224,11 @@ export function QuestionTable({
                 </TableCell>
                 <TableCell className="sticky right-0 z-10 bg-background border-l text-center">
                   <div className="flex items-center justify-center gap-1">
-                    <EditAnswerDialog question={q} onUpdated={onUpdated} />
+                    <EditAnswerDialog
+                      question={q}
+                      existingCategories={existingCategories}
+                      onUpdated={onUpdated}
+                    />
                     <DeleteQuestionButton questionId={q.id} questionTitle={q.title} onDeleted={onDeleted} />
                     <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/interview/${q.id}/recite`}>背题</Link>} />
                     <Button size="sm" nativeButton={false} render={<Link href={`/interview/${q.id}`}>练习</Link>} />

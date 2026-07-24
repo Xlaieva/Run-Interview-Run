@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { interviewQuestions, interviewChatMessages } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { classifyInterviewQuestion, reviewInterviewAnswer } from "@/lib/classify-interview";
 
 export async function GET() {
+  // Ascending createdAt reproduces the interview doc's priority order (see
+  // scripts/reclassify-interview-questions-by-doc.ts); manually added
+  // questions get a real, later createdAt and naturally sort after.
   const rows = await db
     .select()
     .from(interviewQuestions)
-    .orderBy(desc(interviewQuestions.createdAt));
+    .orderBy(asc(interviewQuestions.createdAt));
   return NextResponse.json(rows);
 }
 
