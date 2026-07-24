@@ -6,6 +6,7 @@ import type {
   TestCase,
   TestCaseResult,
 } from "@/lib/types";
+import { buildAcmStdin, buildAcmExpectedOutput, normalizeAcmOutput } from "@/lib/acm-io";
 
 interface RunMessage {
   code: string;
@@ -14,6 +15,7 @@ interface RunMessage {
   inputVariableNames?: string[];
   testCases?: TestCase[];
   judgeScript?: string;
+  mode?: "normal" | "acm";
 }
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
@@ -375,9 +377,76 @@ async function runLegacy(code: string): Promise<RunResult> {
   };
 }
 
+/**
+ * ACM 模式：每个测试用例单独跑一次全新的 executeScript（不共享全局状态，模拟
+ * 真实 ACM 判题"一个测试点一个全新进程"），注入一个全局同步 readline()（不是
+ * 真实的 Node process.stdin 事件流程——判题时输入本来就是一次性全量已知的，没
+ * 有对应的真实收益），把用户完整程序的打印输出跟期望文本做精确比对。
+ */
+async function runAcmMode(code: string, testCases: TestCase[]): Promise<RunResult> {
+  const testResults: TestCaseResult[] = [];
+
+  for (const tc of testCases) {
+    const stdinText = buildAcmStdin(tc.input);
+    const expectedText = buildAcmExpectedOutput(tc.expected);
+    const stdinLines = stdinText.length ? stdinText.split("\n") : [];
+    (self as unknown as { __stdinLines: string[] }).__stdinLines = stdinLines;
+
+    const harness = `
+function readline() {
+  return self.__stdinLines.length ? self.__stdinLines.shift() : undefined;
+}
+`;
+
+    try {
+      const outputText = transpile(harness + "\n" + code);
+      const exec = await executeScript(outputText);
+      if (exec.thrown) {
+        testResults.push({
+          input: stdinText,
+          expected: expectedText,
+          passed: false,
+          error: exec.thrown.message,
+        });
+        continue;
+      }
+      const actualText = exec.logs
+        .filter((l) => l.level === "log")
+        .map((l) => l.text)
+        .join("\n");
+      testResults.push({
+        input: stdinText,
+        expected: expectedText,
+        actual: actualText,
+        passed: normalizeAcmOutput(actualText) === normalizeAcmOutput(expectedText),
+      });
+    } catch (err) {
+      testResults.push({
+        input: stdinText,
+        expected: expectedText,
+        passed: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  return {
+    ok: testResults.length > 0 && testResults.every((r) => r.passed),
+    logs: [],
+    error: null,
+    testResults,
+  };
+}
+
 self.onmessage = async (event: MessageEvent<RunMessage>) => {
-  const { code, judgeMode, functionName, inputVariableNames, testCases, judgeScript } =
+  const { code, judgeMode, functionName, inputVariableNames, testCases, judgeScript, mode } =
     event.data;
+
+  const canAcmMode =
+    mode === "acm" &&
+    judgeMode === "call" &&
+    Array.isArray(testCases) &&
+    testCases.length > 0;
 
   const canSpecMode = judgeMode === "spec" && !!judgeScript?.trim();
 
@@ -397,7 +466,9 @@ self.onmessage = async (event: MessageEvent<RunMessage>) => {
 
   try {
     let result: RunResult;
-    if (canSpecMode) {
+    if (canAcmMode) {
+      result = await runAcmMode(code, testCases!);
+    } else if (canSpecMode) {
       result = await runSpecMode(code, judgeScript!);
     } else if (canCallMode) {
       result = await runCallMode(code, functionName!, testCases!);
