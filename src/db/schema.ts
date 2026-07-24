@@ -163,6 +163,22 @@ export const interviewChatMessagesRelations = relations(interviewChatMessages, (
   }),
 }));
 
+export const dailyPlans = pgTable("daily_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /** Local calendar date the plan is for, e.g. "2026-07-24" — computed client-side (browser local time) to avoid server/client timezone mismatches. One row per day; resubmitting the same day upserts. */
+  date: text("date").notNull().unique(),
+  /** User's raw plan text, stored verbatim; AI never rewrites it. */
+  planText: text("plan_text").notNull(),
+  /** AI-extracted target count for code-problem attempts today; null if the text didn't mention a number (never guessed). */
+  problemsTarget: integer("problems_target"),
+  /** AI-extracted target count for interview-question practice today; null if the text didn't mention a number. */
+  interviewTarget: integer("interview_target"),
+  /** AI one-line encouraging summary shown in the mascot's speech bubble / phone dialog. */
+  summary: text("summary"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type Problem = typeof problems.$inferSelect;
 export type NewProblem = typeof problems.$inferInsert;
 export type AttemptLog = typeof attemptLogs.$inferSelect;
@@ -173,3 +189,5 @@ export type InterviewAttempt = typeof interviewAttempts.$inferSelect;
 export type NewInterviewAttempt = typeof interviewAttempts.$inferInsert;
 export type InterviewChatMessage = typeof interviewChatMessages.$inferSelect;
 export type NewInterviewChatMessage = typeof interviewChatMessages.$inferInsert;
+export type DailyPlan = typeof dailyPlans.$inferSelect;
+export type NewDailyPlan = typeof dailyPlans.$inferInsert;
