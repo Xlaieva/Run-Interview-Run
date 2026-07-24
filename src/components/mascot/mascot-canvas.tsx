@@ -16,11 +16,28 @@ const MODEL_URL = "/models/RobotExpressive.glb";
  */
 export type MascotAction = "Idle" | "Wave" | "ThumbsUp" | "Yes";
 
+/** 期望吉祥物在画面里呈现的高度（world units）。配合下方相机 fov/distance 调整这里。 */
+const TARGET_HEIGHT = 1.5;
+
 function RobotModel({ action, color }: { action: MascotAction; color?: string }) {
   const group = useRef<Group>(null);
   const { scene, animations } = useGLTF(MODEL_URL);
   const { actions } = useAnimations(animations, group);
   const currentActionRef = useRef<MascotAction>("Idle");
+
+  // 模型自带的站立姿势实际高度约 4.8 个 three.js 单位（不是常见的人形角色 ~1.7 单位），
+  // 硬编码的经验缩放/偏移量之前导致只有腿部落在相机取景框里。这里改成用真实包围盒
+  // 算出的缩放和居中偏移，不管模型原始尺寸是多少都能让它完整、居中显示。
+  useEffect(() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+    const scale = TARGET_HEIGHT / size.y;
+    scene.scale.setScalar(scale);
+    scene.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+  }, [scene]);
 
   // "可贴图"接口的最简单版本：给 Main 材质换个颜色（模型本身没有预烘焙贴图）。
   useEffect(() => {
@@ -76,7 +93,7 @@ function RobotModel({ action, color }: { action: MascotAction; color?: string })
   }, [action, actions]);
   /* eslint-enable react-hooks/immutability */
 
-  return <primitive ref={group} object={scene} scale={0.9} position={[0, -1, 0]} />;
+  return <primitive ref={group} object={scene} />;
 }
 
 useGLTF.preload(MODEL_URL);
