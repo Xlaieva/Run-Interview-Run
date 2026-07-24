@@ -309,5 +309,10 @@ export function buildDailyPlanPrompt(planText: string): string {
 用户的今日计划原文：
 """
 ${planText}
-"""`;
+"""
+
+请以 JSON 格式输出，JSON 必须且只能包含以下英文字段名：
+- problemsTarget: number | null，代码刷题数量目标，没有明确数字就是 null
+- interviewTarget: number | null，面试问答练习数量目标，没有明确数字就是 null
+- summary: string，中文，20个汉字以内的积极鼓励总结`;
 }
