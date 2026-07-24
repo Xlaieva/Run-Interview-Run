@@ -13,6 +13,7 @@ interface RunMessage {
   functionName?: string;
   inputVariableNames?: string[];
   testCases?: TestCase[];
+  judgeScript?: string;
 }
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
@@ -298,6 +299,62 @@ async function runLogMode(
   };
 }
 
+/**
+ * "spec" judge mode: appends the problem's judgeScript after the user's code
+ * and runs it inside the same sandbox scope. The script registers behavioral
+ * tests with a mini jest-style framework — it(name, fn) collects tests, which
+ * are then run sequentially (awaiting async fns) so timer-based problems like
+ * debounce/throttle and async ones like Promise.all can be verified.
+ */
+async function runSpecMode(code: string, judgeScript: string): Promise<RunResult> {
+  const harness = `
+const __tests = [];
+function it(__name, __fn) { __tests.push({ name: __name, fn: __fn }); }
+function sleep(__ms) { return new Promise((__r) => setTimeout(__r, __ms)); }
+function assert(__cond, __msg) {
+  if (!__cond) throw new Error(__msg || "断言失败");
+}
+function assertEqual(__actual, __expected, __msg) {
+  if (!self.__deepEqual(__actual, __expected)) {
+    throw new Error(
+      (__msg ? __msg + "：" : "") +
+      "期望 " + self.__formatArg(__expected) + "，实际 " + self.__formatArg(__actual),
+    );
+  }
+}
+${judgeScript}
+const __results = [];
+for (const __t of __tests) {
+  try {
+    await __t.fn();
+    __results.push({ name: __t.name, input: __t.name, expected: "通过", actual: "通过", passed: true });
+  } catch (__e) {
+    __results.push({ name: __t.name, input: __t.name, expected: "通过", passed: false, error: __e && __e.message ? __e.message : String(__e) });
+  }
+}
+return __results;`;
+
+  const outputText = transpile(code + "\n" + harness);
+  (self as unknown as { __deepEqual: typeof deepEqual }).__deepEqual = deepEqual;
+  (self as unknown as { __formatArg: typeof formatArg }).__formatArg = formatArg;
+
+  const exec = await executeScript(outputText);
+  if (exec.thrown) {
+    return {
+      ok: false,
+      logs: exec.logs,
+      error: { name: exec.thrown.name, message: exec.thrown.message, stack: exec.thrown.stack },
+    };
+  }
+  const testResults = (exec.returnValue as TestCaseResult[]) ?? [];
+  return {
+    ok: testResults.length > 0 && testResults.every((r) => r.passed),
+    logs: exec.logs,
+    error: null,
+    testResults,
+  };
+}
+
 async function runLegacy(code: string): Promise<RunResult> {
   const wrapped = captureTrailingExpression(code);
   const outputText = transpile(wrapped);
@@ -319,7 +376,10 @@ async function runLegacy(code: string): Promise<RunResult> {
 }
 
 self.onmessage = async (event: MessageEvent<RunMessage>) => {
-  const { code, judgeMode, functionName, inputVariableNames, testCases } = event.data;
+  const { code, judgeMode, functionName, inputVariableNames, testCases, judgeScript } =
+    event.data;
+
+  const canSpecMode = judgeMode === "spec" && !!judgeScript?.trim();
 
   const canCallMode =
     judgeMode === "call" &&
@@ -337,7 +397,9 @@ self.onmessage = async (event: MessageEvent<RunMessage>) => {
 
   try {
     let result: RunResult;
-    if (canCallMode) {
+    if (canSpecMode) {
+      result = await runSpecMode(code, judgeScript!);
+    } else if (canCallMode) {
       result = await runCallMode(code, functionName!, testCases!);
     } else if (canLogMode) {
       result = await runLogMode(code, testCases!);

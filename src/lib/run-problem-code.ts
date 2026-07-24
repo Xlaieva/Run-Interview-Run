@@ -17,5 +17,6 @@ export function runProblemCode(problem: Problem, code: string): Promise<RunResul
     functionName: problem.functionName,
     inputVariableNames: problem.inputVariableNames,
     testCases: problem.testCases,
+    judgeScript: problem.judgeScript,
   });
 }

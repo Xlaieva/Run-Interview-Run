@@ -1,6 +1,8 @@
 import type { JudgeMode, RunResult, TestCase } from "./types";
 
 const RUN_TIMEOUT_MS = 5000;
+/** "spec" problems await real timers (debounce/throttle tests), so they get more headroom. */
+const SPEC_RUN_TIMEOUT_MS = 10000;
 
 export function runCode(
   code: string,
@@ -9,6 +11,7 @@ export function runCode(
     functionName?: string | null;
     inputVariableNames?: string[] | null;
     testCases?: TestCase[] | null;
+    judgeScript?: string | null;
   },
 ): Promise<RunResult> {
   return new Promise((resolve) => {
@@ -17,6 +20,8 @@ export function runCode(
     );
     let settled = false;
 
+    const timeoutMs =
+      options?.judgeMode === "spec" ? SPEC_RUN_TIMEOUT_MS : RUN_TIMEOUT_MS;
     const timeout = setTimeout(() => {
       if (settled) return;
       settled = true;
@@ -26,11 +31,11 @@ export function runCode(
         logs: [],
         error: {
           name: "TimeoutError",
-          message: `代码运行超过 ${RUN_TIMEOUT_MS / 1000} 秒，可能存在死循环`,
+          message: `代码运行超过 ${timeoutMs / 1000} 秒，可能存在死循环`,
         },
         timedOut: true,
       });
-    }, RUN_TIMEOUT_MS);
+    }, timeoutMs);
 
     worker.onmessage = (event: MessageEvent<RunResult>) => {
       if (settled) return;
@@ -61,6 +66,7 @@ export function runCode(
       functionName: options?.functionName ?? undefined,
       inputVariableNames: options?.inputVariableNames ?? undefined,
       testCases: options?.testCases ?? undefined,
+      judgeScript: options?.judgeScript ?? undefined,
     });
   });
 }

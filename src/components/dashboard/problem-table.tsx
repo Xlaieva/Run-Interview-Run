@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -22,13 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ALL_FILTER as ALL,
+  distinctNumberOptions,
+  FilterableHead,
+  SelectFilter,
+} from "@/components/table-filters";
 import { formatDateTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { EditSolutionDialog } from "./edit-solution-dialog";
 import { DeleteProblemButton } from "./delete-problem-button";
 import type { Problem } from "@/db/schema";
 
-const ALL = "__all__";
 const UNCATEGORIZED = "未分类";
 const PAGE_SIZES = [5, 10, 15] as const;
 const DEFAULT_PAGE_SIZE = 10;
@@ -41,12 +44,6 @@ function getComplexityLabel(p: Problem) {
 
 function getTotalCount(p: Problem) {
   return p.successNoHintCount + p.success1HintCount + p.success2HintCount;
-}
-
-function distinctNumberOptions(values: number[]) {
-  return Array.from(new Set(values))
-    .sort((a, b) => a - b)
-    .map((n) => ({ value: String(n), label: `${n} 次` }));
 }
 
 type Filters = {
@@ -72,85 +69,6 @@ const EMPTY_FILTERS: Filters = {
   started: ALL,
   reviewCount: ALL,
 };
-
-function ColumnFilterButton({
-  active,
-  children,
-}: {
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            title="筛选"
-            className={cn(
-              "inline-flex size-5 shrink-0 items-center justify-center rounded transition-colors hover:bg-muted hover:text-foreground",
-              active ? "text-primary" : "text-muted-foreground/50",
-            )}
-          >
-            <Filter className={cn("size-3", active && "fill-primary/25")} />
-          </button>
-        }
-      />
-      <PopoverContent align="start" className="w-56 p-2">
-        {children}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function SelectFilter({
-  value,
-  onChange,
-  options,
-  allLabel = "全部",
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  allLabel?: string;
-}) {
-  return (
-    <Select value={value} onValueChange={(v) => onChange(v ?? ALL)}>
-      <SelectTrigger className="w-full">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ALL}>{allLabel}</SelectItem>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function FilterableHead({
-  label,
-  active,
-  className,
-  children,
-}: {
-  label: string;
-  active: boolean;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <TableHead className={className}>
-      <span className="inline-flex items-center justify-center gap-1">
-        {label}
-        <ColumnFilterButton active={active}>{children}</ColumnFilterButton>
-      </span>
-    </TableHead>
-  );
-}
 
 export function ProblemTable({
   problems,

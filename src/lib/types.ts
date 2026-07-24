@@ -15,7 +15,7 @@ export interface RunLogLine {
   text: string;
 }
 
-export type JudgeMode = "call" | "log";
+export type JudgeMode = "call" | "log" | "spec";
 
 export type Language = "typescript" | "python";
 
@@ -59,6 +59,8 @@ export interface TestCaseResult {
   actual?: unknown;
   passed: boolean;
   error?: string;
+  /** "spec" mode only: the it() description of this behavioral test. */
+  name?: string;
 }
 
 export interface RunResult {

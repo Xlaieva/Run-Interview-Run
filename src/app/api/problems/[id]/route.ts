@@ -62,8 +62,12 @@ export async function PATCH(
     }
   }
 
-  if (body?.judgeMode === "call" || body?.judgeMode === "log") {
+  if (body?.judgeMode === "call" || body?.judgeMode === "log" || body?.judgeMode === "spec") {
     update.judgeMode = body.judgeMode;
+  }
+
+  if (typeof body?.judgeScript === "string") {
+    update.judgeScript = body.judgeScript.trim() || null;
   }
 
   if (typeof body?.solutionsJson === "string" && body.solutionsJson.trim()) {

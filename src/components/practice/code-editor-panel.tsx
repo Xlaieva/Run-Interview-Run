@@ -168,23 +168,33 @@ export function CodeEditorPanel({
                         <X className="size-3 shrink-0 text-red-400" />
                       )}
                       <span className="text-muted-foreground">
-                        用例 {i + 1}：输入 {formatValue(tc.input)}
+                        {tc.name
+                          ? `用例 ${i + 1}：${tc.name}`
+                          : `用例 ${i + 1}：输入 ${formatValue(tc.input)}`}
                       </span>
                     </div>
-                    <div className="mt-0.5 pl-4.5 whitespace-pre-wrap">
-                      期望 {formatValue(tc.expected)}
-                      {!tc.passed && (
-                        <>
-                          {" "}
-                          / 实际{" "}
-                          {tc.error ? (
-                            <span className="text-red-400">抛出异常：{tc.error}</span>
-                          ) : (
-                            formatValue(tc.actual)
-                          )}
-                        </>
-                      )}
-                    </div>
+                    {tc.name ? (
+                      !tc.passed && (
+                        <div className="mt-0.5 pl-4.5 whitespace-pre-wrap text-red-400">
+                          {tc.error ?? "未通过"}
+                        </div>
+                      )
+                    ) : (
+                      <div className="mt-0.5 pl-4.5 whitespace-pre-wrap">
+                        期望 {formatValue(tc.expected)}
+                        {!tc.passed && (
+                          <>
+                            {" "}
+                            / 实际{" "}
+                            {tc.error ? (
+                              <span className="text-red-400">抛出异常：{tc.error}</span>
+                            ) : (
+                              formatValue(tc.actual)
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div

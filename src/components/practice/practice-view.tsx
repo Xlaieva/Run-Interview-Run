@@ -45,6 +45,11 @@ ${declarations}
 }
 `;
   }
+  if (problem.judgeMode === "spec") {
+    return `// 按题目要求实现，判题脚本会直接调用你在这里定义的函数 / 类 / 原型方法
+
+`;
+  }
   return `function solution() {
   // 在这里编写你的解法
 
@@ -64,6 +69,9 @@ function buildFailureSummary(runResult: RunResult | null): string | undefined {
     if (failed.length === 0) return undefined;
     return failed
       .map((t, i) => {
+        if (t.name) {
+          return `用例「${t.name}」失败：${t.error ?? "未通过"}`;
+        }
         const actual = t.error
           ? `抛出异常：${t.error}`
           : `实际 ${JSON.stringify(t.actual)}`;

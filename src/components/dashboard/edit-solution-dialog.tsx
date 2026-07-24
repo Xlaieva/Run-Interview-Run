@@ -39,6 +39,15 @@ const LOG_MODE_PLACEHOLDER = `[
   { "values": { "nums": [3, 2, 4], "target": 6 }, "expected": [1, 2] }
 ]`;
 
+const SPEC_PLACEHOLDER = `it("300ms 内连续调用 3 次只执行最后一次", async () => {
+  let count = 0;
+  const fn = debounce(() => { count++; }, 100);
+  fn(); fn(); fn();
+  assertEqual(count, 0, "delay 未到不应执行");
+  await sleep(150);
+  assertEqual(count, 1);
+});`;
+
 const SOLUTIONS_PLACEHOLDER = `[
   {
     "approachName": "哈希表",
@@ -82,6 +91,7 @@ export function EditSolutionDialog({
   const [testCasesJson, setTestCasesJson] = useState(
     problem.testCases ? JSON.stringify(problem.testCases, null, 2) : "",
   );
+  const [judgeScript, setJudgeScript] = useState(problem.judgeScript ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const isPython = problem.language === "python";
@@ -97,6 +107,7 @@ export function EditSolutionDialog({
     setFunctionSignature(updated.functionSignature ?? "");
     setInputVariableNamesText((updated.inputVariableNames ?? []).join(", "));
     setTestCasesJson(updated.testCases ? JSON.stringify(updated.testCases, null, 2) : "");
+    setJudgeScript(updated.judgeScript ?? "");
     onUpdated(updated);
   }
 
@@ -153,12 +164,15 @@ export function EditSolutionDialog({
       if (effectiveJudgeMode === "call") {
         body.functionName = functionName;
         body.functionSignature = functionSignature;
-      } else {
+      } else if (effectiveJudgeMode === "log") {
         const names = inputVariableNamesText
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean);
         body.inputVariableNamesJson = JSON.stringify(names);
+      } else {
+        body.functionSignature = functionSignature;
+        body.judgeScript = judgeScript;
       }
       if (testCasesJson.trim()) {
         body.testCasesJson = testCasesJson;
@@ -310,6 +324,9 @@ export function EditSolutionDialog({
                   <TabsTrigger value="log" className="flex-1">
                     变量 + 日志匹配模式
                   </TabsTrigger>
+                  <TabsTrigger value="spec" className="flex-1">
+                    行为测试模式
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="call" className="grid gap-3 pt-2">
                   <div className="grid gap-2">
@@ -378,6 +395,36 @@ export function EditSolutionDialog({
                     />
                     <p className="text-xs text-muted-foreground">
                       要求代码最后用一次 console.log 打印结果，判题时会把最后一次打印的值和 expected 比对。
+                    </p>
+                  </div>
+                </TabsContent>
+                <TabsContent value="spec" className="grid gap-3 pt-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-spec-sig">函数/类签名（作为起始代码）</Label>
+                    <Input
+                      id="edit-spec-sig"
+                      value={functionSignature}
+                      onChange={(e) => setFunctionSignature(e.target.value)}
+                      placeholder="function debounce(fn: Function, delay: number): Function"
+                      className="font-mono text-sm"
+                      disabled={submitting || regenerating}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-judge-script">
+                      判题脚本（it 注册用例，assert / assertEqual 断言，sleep 等待定时器）
+                    </Label>
+                    <Textarea
+                      id="edit-judge-script"
+                      rows={10}
+                      className="font-mono text-xs"
+                      value={judgeScript}
+                      onChange={(e) => setJudgeScript(e.target.value)}
+                      placeholder={SPEC_PLACEHOLDER}
+                      disabled={submitting || regenerating}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      脚本会拼接在用户代码之后执行，可直接引用用户定义的函数/类；适合防抖、Promise.all、EventEmitter 这类无法用输入输出判题的行为型手写题。
                     </p>
                   </div>
                 </TabsContent>

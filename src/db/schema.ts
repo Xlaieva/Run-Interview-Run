@@ -27,8 +27,18 @@ export const problems = pgTable("problems", {
    * always works. "log": judge injects each test case's values into the
    * top-level variables named in inputVariableNames and compares the last
    * console.log call — manual fallback for when there's no AI available.
+   * "spec": judge appends judgeScript (an it/assert-style behavioral test
+   * script) to the user's code and runs the registered tests — for
+   * handwritten-JS problems (debounce, Promise.all, EventEmitter…) whose
+   * correctness can't be expressed as input/output pairs.
    */
   judgeMode: text("judge_mode").$type<JudgeMode>().notNull().default("call"),
+  /**
+   * "spec" mode only: per-problem test script run after the user's code.
+   * Written against the sandbox's mini test framework: it(name, fn) registers
+   * a test, assert/assertEqual make assertions, sleep(ms) awaits real timers.
+   */
+  judgeScript: text("judge_script"),
   /** Function the judge calls in "call" mode, e.g. "twoSum". Must match solutionCode's definition. */
   functionName: text("function_name"),
   /** Signature-only declaration shown as the editor starter, e.g. "function twoSum(nums: number[], target: number): number[]". */
